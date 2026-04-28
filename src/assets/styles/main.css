@@ -1,0 +1,295 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import "tailwindcss";
+
+/* ============================================================
+   모두의 여행 - "Luminous Inclusion" Design System
+   참조: example/design/lumina_voyage/DESIGN.md
+   ============================================================ */
+
+@theme {
+  /* === Material 3 Surface Hierarchy (디자인 가이드 기반) === */
+  --color-surface: #F8F9FF;
+  --color-surface-bright: #F8F9FF;
+  --color-surface-dim: #CBDBF5;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #EFF4FF;
+  --color-surface-container: #E5EEFF;
+  --color-surface-container-high: #DCE9FF;
+  --color-surface-container-highest: #D3E4FE;
+  --color-surface-variant: #D3E4FE;
+
+  /* === Primary (The "North Star") === */
+  --color-primary: #006196;
+  --color-primary-container: #007ABC;
+  --color-primary-fixed: #CDE5FF;
+  --color-primary-fixed-dim: #95CCFF;
+  --color-on-primary: #FFFFFF;
+  --color-on-primary-container: #FDFCFF;
+  --color-on-primary-fixed: #001D32;
+  --color-on-primary-fixed-variant: #004A75;
+
+  /* === Secondary (The "Safe Path" — 접근성 전용 초록) === */
+  --color-secondary: #006D41;
+  --color-secondary-container: #82F6B3;
+  --color-secondary-fixed: #84F9B6;
+  --color-secondary-fixed-dim: #67DC9B;
+  --color-on-secondary: #FFFFFF;
+  --color-on-secondary-container: #007144;
+  --color-on-secondary-fixed: #002110;
+  --color-on-secondary-fixed-variant: #005230;
+
+  /* === Tertiary === */
+  --color-tertiary: #785600;
+  --color-tertiary-container: #976E00;
+  --color-tertiary-fixed: #FFDEA4;
+  --color-tertiary-fixed-dim: #FEBB02;
+
+  /* === Error === */
+  --color-error: #BA1A1A;
+  --color-error-container: #FFDAD6;
+
+  /* === Text Hierarchy === */
+  --color-on-surface: #0B1C30;
+  --color-on-surface-variant: #3F4851;
+  --color-on-background: #0B1C30;
+  --color-outline: #6F7882;
+  --color-outline-variant: #BFC7D2;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #EAF1FF;
+  --color-inverse-primary: #95CCFF;
+
+  /* === Font Family === */
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-headline: 'Pretendard Variable', Pretendard, sans-serif;
+
+  /* === "Sunlight Shadow" (디자인 가이드 4) === */
+  --shadow-sunlight: 0 8px 24px rgba(11, 28, 48, 0.06);
+  --shadow-sm: 0 2px 8px rgba(11, 28, 48, 0.04);
+  --shadow-md: 0 4px 16px rgba(11, 28, 48, 0.06);
+  --shadow-lg: 0 8px 24px rgba(11, 28, 48, 0.06);
+  --shadow-xl: 0 12px 40px rgba(11, 28, 48, 0.08);
+
+  /* === Border Radius (디자인 가이드: 16px/24px — "Large-Radius" language) === */
+  --radius-DEFAULT: 1rem;
+  --radius-md: 1.5rem;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+  --radius-full: 9999px;
+}
+
+/* ============================================================
+   Root CSS Variables (테마 전환용 동적 토큰)
+   ============================================================ */
+:root {
+  /* === Font Scale (사용자 조정 가능) === */
+  --font-scale: 1;
+  --font-size-xs: calc(12px * var(--font-scale));
+  --font-size-sm: calc(14px * var(--font-scale));
+  --font-size-base: calc(16px * var(--font-scale));
+  --font-size-lg: calc(18px * var(--font-scale));
+  --font-size-xl: calc(22px * var(--font-scale));
+  --font-size-2xl: calc(28px * var(--font-scale));
+  --font-size-3xl: calc(36px * var(--font-scale));
+  --font-size-display: calc(44px * var(--font-scale));
+
+  /* === Touch Target (WCAG 2.1 AAA) === */
+  --touch-min: 48px;
+  --btn-height: 56px;
+
+  /* === Spacing === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* === Transition === */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  /* === Layout === */
+  --header-height: 64px;
+  --bottom-nav-height: 80px;
+  --content-max-width: 1280px;
+
+  /* === Signature Gradient === */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-container));
+}
+
+/* ============================================================
+   간편 모드 (WCAG: 70대+ / 이동보조기기 사용)
+   ============================================================ */
+[data-theme="simple"] {
+  --font-scale: 1.285;
+  --touch-min: 60px;
+  --btn-height: 64px;
+  --space-md: 20px;
+  --space-lg: 32px;
+  --header-height: 72px;
+  --bottom-nav-height: 88px;
+}
+
+/* ============================================================
+   고대비 모드
+   ============================================================ */
+[data-contrast="high"] {
+  --color-surface: #000000;
+  --color-surface-bright: #0A0A0A;
+  --color-surface-container-lowest: #1A1A1A;
+  --color-surface-container-low: #222222;
+  --color-surface-container: #2A2A2A;
+  --color-on-surface: #FFFFFF;
+  --color-on-surface-variant: #D1D5DB;
+  --color-on-background: #FFFFFF;
+  --color-outline-variant: #4B5563;
+  --color-primary: #4DB8FF;
+  --color-primary-container: #7DCCFF;
+  --color-secondary: #4ADE80;
+  --color-secondary-fixed-dim: #86EFAC;
+}
+
+/* ============================================================
+   Base Reset & Global Styles
+   — @layer base 안에 넣어야 Tailwind v4 유틸리티(p-*, px-* 등)보다
+     낮은 우선순위를 유지합니다.
+   ============================================================ */
+@layer base {
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+  }
+}
+
+html {
+  font-size: var(--font-size-base);
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--color-on-surface);
+  background-color: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+}
+
+/* === Focus Styles (접근성 필수) === */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* === Links === */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-on-primary-fixed-variant);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-outline-variant);
+  border-radius: var(--radius-full);
+}
+
+/* === Utility Classes === */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.aria-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* === Design System Utility Classes === */
+.bg-glass {
+  background: rgba(248, 249, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.bg-signature-gradient {
+  background: var(--gradient-primary);
+}
+
+.sunlight-shadow {
+  box-shadow: var(--shadow-sunlight);
+}
+
+.ghost-border {
+  border: 2px solid rgba(191, 199, 210, 0.15);
+}
+
+/* === Material Symbols baseline alignment === */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
