@@ -51,14 +51,15 @@ client.interceptors.response.use(
         const refreshToken = getCookie('refreshToken') || localStorage.getItem('refreshToken')
         if (!refreshToken) throw new Error('No refresh token')
 
-        const { data } = await axios.post(
+        const { data: res } = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
           { refreshToken }
         )
+        const newToken = res.data?.accessToken || res.accessToken
 
-        setCookie('accessToken', data.accessToken, 7)
-        localStorage.setItem('accessToken', data.accessToken)
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+        setCookie('accessToken', newToken, 7)
+        localStorage.setItem('accessToken', newToken)
+        originalRequest.headers.Authorization = `Bearer ${newToken}`
         return client(originalRequest)
       } catch {
         removeCookie('accessToken')

@@ -1,21 +1,42 @@
 /**
- * 접근성 관련 상수 및 배지 매핑
+ * 접근성 상수 — SQL accessibility_type/status/category 기반
  */
-export const ACCESSIBILITY_BADGES = [
-  { key: 'wheelchairAccessible', label: '휠체어', icon: '♿', color: 'primary' },
-  { key: 'strollerAccessible', label: '유모차', icon: '🍼', color: 'secondary' },
-  { key: 'disabledRestroom', label: '장애인화장실', icon: '🚻', color: 'secondary' },
-  { key: 'elevatorAvailable', label: '엘리베이터', icon: '🛗', color: 'secondary' },
-  { key: 'rampAvailable', label: '경사로', icon: '↗', color: 'secondary' },
-]
+
+/** Accessibility Status (SQL: accessibility_status) */
+export const ACCESSIBILITY_STATUS = {
+  AVAILABLE: 'AVAILABLE',
+  UNAVAILABLE: 'UNAVAILABLE',
+  PARTIAL: 'PARTIAL',
+  UNKNOWN: 'UNKNOWN',
+  NEED_CHECK: 'NEED_CHECK',
+}
+
+export const STATUS_LABELS = {
+  AVAILABLE: '이용 가능',
+  UNAVAILABLE: '이용 불가',
+  PARTIAL: '부분 가능',
+  UNKNOWN: '정보 없음',
+  NEED_CHECK: '확인 필요',
+}
+
+/** Accessibility Category (SQL: accessibility_category) */
+export const ACCESSIBILITY_CATEGORIES = {
+  PHYSICAL: '지체장애',
+  VISUAL: '시각장애',
+  HEARING: '청각장애',
+  INFANT_FAMILY: '영유아/가족',
+  COMMON: '공통',
+  ETC: '기타',
+}
 
 /**
- * 이동 보조기기가 필요로 하는 접근성 필드 매핑
+ * accessibilitySummary 키 → 아이콘/라벨 매핑
+ * API 응답의 accessibilitySummary 객체 키와 일치
  */
-export const MOBILITY_ACCESSIBILITY_MAP = {
-  MANUAL_WHEELCHAIR: ['wheelchairAccessible'],
-  ELECTRIC_WHEELCHAIR: ['wheelchairAccessible'],
-  WALKING_AID: ['elevatorAvailable', 'rampAvailable'],
-  STROLLER: ['strollerAccessible'],
-  NONE: [],
-}
+export const ACCESSIBILITY_SUMMARY_FIELDS = [
+  { key: 'wheelchair', label: '휠체어', icon: 'accessible' },
+  { key: 'stroller', label: '유모차', icon: 'stroller' },
+  { key: 'accessibleRestroom', label: '장애인화장실', icon: 'wc' },
+  { key: 'elevator', label: '엘리베이터', icon: 'elevator' },
+  { key: 'ramp', label: '경사로', icon: 'signal_cellular_alt' },
+]
