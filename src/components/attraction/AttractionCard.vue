@@ -1,57 +1,26 @@
 <template>
-  <div
-    :class="[
-      'bg-[var(--color-surface-container-lowest)] rounded-[var(--radius-DEFAULT)] overflow-hidden transition-all duration-300',
-      isSelected ? 'border-2 border-[var(--color-primary)] sunlight-shadow' : 'ghost-border hover:shadow-[var(--shadow-lg)] hover:-translate-y-1',
-    ]"
-    @click="$emit('select', attraction)"
-  >
-    <!-- Image with overlaid title (editorial style per design guide) -->
-    <div class="relative h-52 overflow-hidden">
-      <img
-        :src="attraction.imageUrl"
-        :alt="attraction.name"
-        class="w-full h-full object-cover"
-        loading="lazy"
-      />
-      <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-      <div class="absolute bottom-4 left-5 right-5">
-        <h3 class="text-xl font-extrabold text-white tracking-tight leading-tight">{{ attraction.name }}</h3>
-        <p class="text-sm text-white/80 font-medium mt-0.5">
-          {{ attraction.estimatedCost > 0 ? `${attraction.estimatedCost.toLocaleString()}원` : '무료' }}
-        </p>
+  <div :class="['attraction-card', { 'attraction-card--selected': isSelected }]" @click="$emit('select', attraction)">
+    <div class="attraction-card__image">
+      <img :src="attraction.thumbnailImageUrl" :alt="attraction.name" loading="lazy" />
+      <div class="attraction-card__overlay" />
+      <div class="attraction-card__info">
+        <h3 class="attraction-card__name">{{ attraction.name }}</h3>
       </div>
-      <!-- Selected checkmark -->
-      <div v-if="isSelected" class="absolute top-3 right-3 w-8 h-8 bg-[var(--color-primary)] rounded-full flex items-center justify-center">
-        <span class="material-symbols-outlined text-white text-lg" style="font-variation-settings: 'FILL' 1;">check</span>
+      <div v-if="isSelected" class="attraction-card__check">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check</span>
       </div>
     </div>
 
-    <div class="p-5">
+    <div class="attraction-card__body">
       <!-- Accessibility Badges -->
-      <div class="flex flex-wrap gap-2 mb-3">
-        <AccessibilityBadge
-          v-for="key in activeBadges"
-          :key="key"
-          :type="key"
-        />
+      <div v-if="badgeEntries.length" class="attraction-card__badges">
+        <AccessibilityBadge v-for="[key, status] in badgeEntries" :key="key" :type="key" :status="status" />
       </div>
 
-      <!-- AI Recommendation reason -->
-      <div v-if="attraction.recommendReason" class="bg-[var(--color-surface-container-low)] rounded-[var(--radius-DEFAULT)] p-4 mb-4">
-        <p class="text-[var(--font-size-sm)] text-[var(--color-on-surface-variant)] leading-relaxed">
-          <span class="font-bold text-[var(--color-primary)]">AI 추천:</span> {{ attraction.recommendReason }}
-        </p>
-      </div>
+      <p v-if="attraction.overview" class="attraction-card__desc">{{ attraction.overview }}</p>
 
-      <!-- Action button -->
-      <BaseButton
-        :variant="isSelected ? 'outline' : 'primary'"
-        full-width
-        :aria-label="isSelected ? `${attraction.name} 선택 해제` : `${attraction.name} 일정에 추가`"
-        @click.stop="$emit(isSelected ? 'unselect' : 'add', attraction)"
-      >
-        <span class="material-symbols-outlined text-lg">{{ isSelected ? 'check' : 'add' }}</span>
+      <BaseButton :variant="isSelected ? 'outline' : 'primary'" full-width size="sm" @click.stop="$emit(isSelected ? 'unselect' : 'add', attraction)">
+        <span class="material-symbols-outlined" style="font-size: 18px;">{{ isSelected ? 'check' : 'add' }}</span>
         {{ isSelected ? '추가됨' : '일정에 추가' }}
       </BaseButton>
     </div>
@@ -70,9 +39,44 @@ const props = defineProps({
 
 defineEmits(['select', 'add', 'unselect'])
 
-const activeBadges = computed(() => {
-  const a = props.attraction.accessibility
-  if (!a) return []
-  return Object.keys(a).filter((k) => a[k] === true)
+const badgeEntries = computed(() => {
+  const summary = props.attraction.accessibilitySummary
+  if (!summary) return []
+  return Object.entries(summary)
 })
 </script>
+
+<style scoped>
+.attraction-card {
+  background: var(--color-surface-container-lowest);
+  border-radius: var(--radius-DEFAULT);
+  overflow: hidden;
+  border: 2px solid rgba(191,199,210,.15);
+  transition: all 0.2s ease;
+}
+.attraction-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.attraction-card--selected { border-color: var(--color-primary); box-shadow: var(--shadow-lg); }
+
+.attraction-card__image { position: relative; height: 200px; overflow: hidden; }
+.attraction-card__image img { width: 100%; height: 100%; object-fit: cover; }
+.attraction-card__overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.5), transparent); }
+.attraction-card__info { position: absolute; bottom: 12px; left: 16px; right: 16px; }
+.attraction-card__name { font-size: var(--font-size-lg); font-weight: 800; color: #fff; }
+.attraction-card__check {
+  position: absolute; top: 12px; right: 12px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.attraction-card__check .material-symbols-outlined { font-size: 18px; }
+
+.attraction-card__body { padding: 16px; }
+.attraction-card__badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.attraction-card__desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-on-surface-variant);
+  line-height: 1.5;
+  margin-bottom: 12px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+</style>

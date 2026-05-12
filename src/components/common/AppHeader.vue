@@ -19,10 +19,10 @@
         </router-link>
       </div>
       <div class="flex items-center gap-3">
-        <template v-if="authStore.isAuthenticated">
+        <template v-if="userStore.isAuthenticated">
           <router-link to="/profile" class="flex items-center gap-2 text-sm font-bold text-[var(--color-on-surface)] hover:text-[var(--color-primary)] transition-colors px-3 py-1.5 rounded-full hover:bg-[var(--color-surface-container)]">
             <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">account_circle</span>
-            {{ authStore.userName }}
+            {{ userStore.userName }}
           </router-link>
         </template>
         <template v-else>
@@ -54,14 +54,14 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '@/stores/authStore'
+import { useUserStore } from '@/stores/userStore'
 
 defineProps({
   title: { type: String, default: '' },
   showBack: { type: Boolean, default: false },
 })
 
-const authStore = useAuthStore()
+const userStore = useUserStore()
 
 const navItems = [
   { to: '/', label: '홈' },
