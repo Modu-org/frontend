@@ -3,50 +3,91 @@ import { MOCK_USER } from './mockData'
 const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms))
 
 let mockUsers = [{ ...MOCK_USER, password: 'test1234' }]
-let mockProfile = null
+let profileStore = { ...MOCK_USER }
+
+/** API 명세 응답 래퍼 */
+function ok(data, message = '성공', code = 700) {
+  return { data: { success: true, message, data }, status: code }
+}
+function created(data, message) {
+  return { data: { success: true, message, data }, status: 701 }
+}
+function fail(status, message, errorCode) {
+  throw { response: { status, data: { success: false, message, errorCode } } }
+}
 
 export const mockAuthApi = {
-  async register({ email, password, name }) {
+  async signup({ userName, password, nickname, ...profile }) {
     await delay()
-    if (mockUsers.find((u) => u.email === email)) {
-      throw { response: { status: 409, data: { message: '이미 가입된 이메일입니다.' } } }
+    if (mockUsers.find((u) => u.userName === userName)) {
+      fail(909, '이미 사용 중인 아이디입니다.', 'DUPLICATE_USER_NAME')
     }
-    const user = { userId: mockUsers.length + 1, email, name, password, profile: null }
+    const user = { userId: mockUsers.length + 1, userName, password, nickname, ...profile }
     mockUsers.push(user)
-    const tokens = { accessToken: `mock_access_${user.userId}`, refreshToken: `mock_refresh_${user.userId}` }
-    return { data: { user: { userId: user.userId, email, name }, ...tokens } }
+    profileStore = { ...user }
+    return created(
+      { userId: user.userId, userName, nickname },
+      '회원가입이 완료되었습니다.'
+    )
   },
 
-  async login({ email, password }) {
+  async login({ userName, password }) {
     await delay()
-    const user = mockUsers.find((u) => u.email === email && u.password === password)
+    const user = mockUsers.find((u) => u.userName === userName && u.password === password)
     if (!user) {
-      throw { response: { status: 401, data: { message: '이메일 또는 비밀번호가 올바르지 않습니다.' } } }
+      fail(901, '아이디 또는 비밀번호가 일치하지 않습니다.', 'LOGIN_FAILED')
     }
-    const tokens = { accessToken: `mock_access_${user.userId}`, refreshToken: `mock_refresh_${user.userId}` }
-    return { data: { user: { userId: user.userId, email: user.email, name: user.name }, ...tokens } }
+    profileStore = { ...user }
+    return ok({
+      accessToken: `mock_access_${user.userId}`,
+      refreshToken: `mock_refresh_${user.userId}`,
+      userId: user.userId,
+      nickname: user.nickname,
+      ageGroupCode: user.ageGroupCode ?? null,
+      tripStyleCode: user.tripStyleCode ?? null,
+      usesWheelchair: user.usesWheelchair ?? false,
+      hasStroller: user.hasStroller ?? false,
+      usesWalkingAid: user.usesWalkingAid ?? false,
+      hasServiceDog: user.hasServiceDog ?? false,
+      needsVisualAssistance: user.needsVisualAssistance ?? false,
+      uiMode: user.uiMode ?? 'STANDARD',
+    }, '로그인에 성공했습니다.')
+  },
+
+  async checkId(userName) {
+    await delay(100)
+    const exists = mockUsers.some((u) => u.userName === userName)
+    return ok(
+      { userName, available: !exists },
+      exists ? '이미 사용 중인 아이디입니다.' : '사용 가능한 아이디입니다.'
+    )
   },
 
   async refresh() {
     await delay(100)
-    return { data: { accessToken: 'mock_access_refreshed' } }
+    return ok({ accessToken: 'mock_access_refreshed' }, 'Access Token이 재발급되었습니다.')
   },
 
   async logout() {
     await delay(100)
-    return { data: { success: true } }
+    return ok(null, '로그아웃되었습니다.')
   },
 }
 
 export const mockUserApi = {
-  async getProfile() {
+  async getMe() {
     await delay()
-    return { data: { ...MOCK_USER, profile: mockProfile } }
+    const { password, ...safe } = profileStore
+    return ok(safe, '내 정보 조회에 성공했습니다.')
   },
 
-  async updateProfile(data) {
+  async updateMe(data) {
     await delay()
-    mockProfile = { ...mockProfile, ...data }
-    return { data: { ...MOCK_USER, profile: mockProfile } }
+    profileStore = { ...profileStore, ...data }
+    const { password, ...safe } = profileStore
+    return ok(
+      { userId: safe.userId, nickname: safe.nickname, uiMode: safe.uiMode },
+      '내 정보가 수정되었습니다.'
+    )
   },
 }
