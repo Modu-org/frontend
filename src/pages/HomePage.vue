@@ -41,7 +41,7 @@
       <div class="flex items-end justify-between mb-5">
         <div>
           <h2 class="text-xl md:text-2xl font-extrabold text-[var(--color-on-surface)] tracking-tight">
-            {{ authStore.userName }}님을 위한 맞춤 추천
+            {{ userStore.nickname }}님을 위한 맞춤 추천
           </h2>
           <p class="text-sm text-[var(--color-on-surface-variant)] mt-1">프로필 기반으로 추천해드려요</p>
         </div>
@@ -139,28 +139,24 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import AttractionCard from '@/components/attraction/AttractionCard.vue'
-import { useAuthStore } from '@/stores/authStore'
+import { useUserStore } from '@/stores/userStore'
 import { MOCK_ATTRACTIONS } from '@/api/mock/mockData'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const userStore = useUserStore()
 
 const searchQuery = ref('')
 const selectedRegion = ref('서울')
 
 const REGIONS = ['서울', '부산', '제주', '경주', '강릉', '전주']
 
-const isLoggedIn = computed(() => authStore.isAuthenticated)
-const hasProfile = computed(() => authStore.hasProfile)
+const isLoggedIn = computed(() => userStore.isAuthenticated)
+const hasProfile = computed(() => userStore.hasProfile)
 
-// Section data slices from mock
 const customItems = ref(MOCK_ATTRACTIONS.slice(0, 4))
-const parentsItems = ref([...MOCK_ATTRACTIONS].filter(a => a.accessibility?.rampAvailable))
-const wheelchairItems = ref([...MOCK_ATTRACTIONS].filter(a => a.accessibility?.wheelchairAccessible))
-const regionItems = computed(() => {
-  // In MVP, all items are Seoul; just return all
-  return MOCK_ATTRACTIONS
-})
+const parentsItems = ref([...MOCK_ATTRACTIONS].filter(a => a.accessibilitySummary?.ramp === 'AVAILABLE'))
+const wheelchairItems = ref([...MOCK_ATTRACTIONS].filter(a => a.accessibilitySummary?.wheelchair === 'AVAILABLE'))
+const regionItems = computed(() => MOCK_ATTRACTIONS)
 
 function handleSearch() {
   if (!searchQuery.value.trim()) return
@@ -172,10 +168,8 @@ function goToDetail(attraction) {
 }
 
 function handleAdd(attraction) {
-  if (!authStore.isAuthenticated) {
-    if (confirm('로그인이 필요한 서비스입니다. 로그인 페이지로 이동하시겠습니까?')) {
-      router.push({ name: 'Login', query: { redirect: '/' } })
-    }
+  if (!userStore.isAuthenticated) {
+    router.push({ name: 'Login', query: { redirect: '/' } })
     return
   }
   alert(`${attraction.name}을(를) 일정에 추가했습니다.`)

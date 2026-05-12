@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'
+import { useUserStore } from '@/stores/userStore'
 
 const routes = [
   {
@@ -39,14 +39,14 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/trip/:tripId/edit',
+    path: '/schedule/:scheduleId/edit',
     name: 'NodeEditor',
     component: () => import('@/pages/NodeEditorPage.vue'),
     meta: { requiresAuth: true },
   },
   {
-    path: '/trip/:tripId',
-    name: 'TripDetail',
+    path: '/schedule/:scheduleId',
+    name: 'ScheduleDetail',
     component: () => import('@/pages/TripDetailPage.vue'),
     meta: { requiresAuth: true },
   },
@@ -73,18 +73,17 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const authStore = useAuthStore()
+  const userStore = useUserStore()
 
   // 로그인 페이지: 이미 인증된 사용자는 홈으로
   if (to.meta.requiresAuth === false) {
-    if (authStore.isAuthenticated) return { name: 'Home' }
+    if (userStore.isAuthenticated) return { name: 'Home' }
     return true
   }
 
-  // 게스트 허용 페이지 (홈, 추천, 관광지 상세): 누구나 접근 가능
+  // 게스트 허용 페이지
   if (to.meta.guestAllowed) {
-    // 로그인 되어 있고, 프로필 미설정이면 온보딩 체크
-    if (authStore.isAuthenticated && !authStore.hasProfile) {
+    if (userStore.isAuthenticated && !userStore.hasProfile) {
       const skipUntil = localStorage.getItem('skipOnboardingUntil')
       if (!skipUntil || Date.now() > Number(skipUntil)) {
         return { name: 'Onboarding' }
@@ -94,12 +93,12 @@ router.beforeEach(async (to) => {
   }
 
   // 인증 필요 페이지
-  if (!authStore.isAuthenticated) {
+  if (!userStore.isAuthenticated) {
     return { name: 'Login', query: { redirect: to.fullPath } }
   }
 
-  // 프로필 설정 확인 (온보딩 외)
-  if (to.name !== 'Onboarding' && !authStore.hasProfile) {
+  // 프로필 설정 확인
+  if (to.name !== 'Onboarding' && !userStore.hasProfile) {
     const skipUntil = localStorage.getItem('skipOnboardingUntil')
     if (!skipUntil || Date.now() > Number(skipUntil)) {
       return { name: 'Onboarding' }
