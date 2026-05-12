@@ -1,42 +1,46 @@
 <template>
-  <span
-    :class="classes"
-    :title="label"
-    :aria-label="label"
-    role="img"
-  >
-    <span class="material-symbols-outlined text-[16px]" aria-hidden="true" :style="iconStyle">{{ iconName }}</span>
-    <span class="text-[var(--font-size-xs)] font-bold">{{ label }}</span>
+  <span :class="['badge', `badge--${statusColor}`]">
+    <span class="material-symbols-outlined badge__icon">{{ iconName }}</span>
+    {{ label }}
   </span>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { ACCESSIBILITY_SUMMARY_FIELDS, ACCESSIBILITY_STATUS } from '@/constants/accessibility'
 
 const props = defineProps({
+  /** accessibilitySummary 키 (wheelchair, stroller 등) */
   type: { type: String, required: true },
+  /** AVAILABLE, UNAVAILABLE, UNKNOWN 등 */
+  status: { type: String, default: 'UNKNOWN' },
 })
 
-/* Design Guide 5 — Accessibility Chips:
-   - Soft green (secondary-fixed-dim) bg with on-secondary-fixed text
-   - Shape: md roundedness (1.5rem)
-   - Thick-stroke icon */
-const BADGE_MAP = {
-  wheelchairAccessible: { icon: 'accessible_forward', label: '휠체어 가능' },
-  strollerAccessible: { icon: 'stroller', label: '유모차 가능' },
-  disabledRestroom: { icon: 'wc', label: '장애인 화장실' },
-  elevatorAvailable: { icon: 'elevator', label: '엘리베이터' },
-  rampAvailable: { icon: 'trending_up', label: '경사로' },
-}
+const field = computed(() => ACCESSIBILITY_SUMMARY_FIELDS.find((f) => f.key === props.type))
+const label = computed(() => field.value?.label || props.type)
+const iconName = computed(() => field.value?.icon || 'info')
 
-const badge = computed(() => BADGE_MAP[props.type] || { icon: 'check_circle', label: props.type })
-const iconName = computed(() => badge.value.icon)
-const label = computed(() => badge.value.label)
-const iconStyle = "font-variation-settings: 'FILL' 1, 'wght' 600;"
-
-const classes = computed(() => [
-  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)]',
-  'bg-[var(--color-secondary-fixed-dim)]/20 text-[var(--color-on-secondary-fixed)]',
-  'text-[var(--font-size-xs)] font-bold',
-])
+const statusColor = computed(() => {
+  if (props.status === ACCESSIBILITY_STATUS.AVAILABLE) return 'available'
+  if (props.status === ACCESSIBILITY_STATUS.UNAVAILABLE) return 'unavailable'
+  return 'unknown'
+})
 </script>
+
+<style scoped>
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge__icon { font-size: 14px; }
+
+.badge--available { background: rgba(0,109,65,.1); color: #006D41; }
+.badge--unavailable { background: rgba(186,26,26,.1); color: var(--color-error); }
+.badge--unknown { background: var(--color-surface-container); color: var(--color-outline); }
+</style>
