@@ -14,7 +14,7 @@
             여행의 즐거움,<br/>모두가 누릴 수 있도록
           </h1>
           <p class="text-base md:text-lg text-white/85 mb-8 max-w-xl">
-            모두가 즐길 수 있는 여행을 모두의 여행과 함께 계획해보세요.
+            모두가 즐길 수 있는 여행을 다온길과 함께 계획해보세요.
           </p>
           <!-- Search Bar -->
           <div class="w-full max-w-xl bg-white rounded-full flex items-center gap-2 px-2 py-2 shadow-2xl">
@@ -41,7 +41,7 @@
       <div class="flex items-end justify-between mb-5">
         <div>
           <h2 class="text-xl md:text-2xl font-extrabold text-[var(--color-on-surface)] tracking-tight">
-            {{ userStore.nickname }}님을 위한 맞춤 추천
+            {{ authStore.nickname }}님을 위한 맞춤 추천
           </h2>
           <p class="text-sm text-[var(--color-on-surface-variant)] mt-1">프로필 기반으로 추천해드려요</p>
         </div>
@@ -139,19 +139,19 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import AttractionCard from '@/components/attraction/AttractionCard.vue'
-import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/authStore'
 import { MOCK_ATTRACTIONS } from '@/api/mock/mockData'
 
 const router = useRouter()
-const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const searchQuery = ref('')
 const selectedRegion = ref('서울')
 
 const REGIONS = ['서울', '부산', '제주', '경주', '강릉', '전주']
 
-const isLoggedIn = computed(() => userStore.isAuthenticated)
-const hasProfile = computed(() => userStore.hasProfile)
+const isLoggedIn = computed(() => authStore.isAuthenticated)
+const hasProfile = computed(() => authStore.hasProfile)
 
 const customItems = ref(MOCK_ATTRACTIONS.slice(0, 4))
 const parentsItems = ref([...MOCK_ATTRACTIONS].filter(a => a.accessibilitySummary?.ramp === 'AVAILABLE'))
@@ -168,7 +168,7 @@ function goToDetail(attraction) {
 }
 
 function handleAdd(attraction) {
-  if (!userStore.isAuthenticated) {
+  if (!authStore.isAuthenticated) {
     router.push({ name: 'Login', query: { redirect: '/' } })
     return
   }

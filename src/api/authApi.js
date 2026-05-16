@@ -1,43 +1,42 @@
 import client from './client'
-import { mockAuthApi, mockUserApi } from './mock/mockAuth'
-
-const useMock = import.meta.env.VITE_USE_MOCK === 'true'
-
 export const authApi = {
+  /** POST /auth/signup */
   signup(data) {
-    if (useMock) return mockAuthApi.signup(data)
     return client.post('/auth/signup', data)
   },
 
+  /** POST /auth/login */
   login(data) {
-    if (useMock) return mockAuthApi.login(data)
     return client.post('/auth/login', data)
   },
 
-  checkId(userName) {
-    if (useMock) return mockAuthApi.checkId(userName)
-    return client.get('/auth/check-id', { params: { id: userName } })
-  },
-
-  refresh(refreshToken) {
-    if (useMock) return mockAuthApi.refresh(refreshToken)
-    return client.post('/auth/refresh', { refreshToken })
-  },
-
+  /** POST /auth/logout */
   logout() {
-    if (useMock) return mockAuthApi.logout()
     return client.post('/auth/logout')
+  },
+
+  /** POST /auth/refresh */
+  refresh() {
+    return client.post('/auth/refresh')
+  },
+
+  /** GET /auth/check-id?userName=xxx */
+  checkId(userName) {
+    return client.get('/auth/check-id', { params: { userName } })
   },
 }
 
+/**
+ * User API — /users/me 엔드포인트도 '완료' 상태
+ */
 export const userApi = {
+  /** GET /users/me */
   getMe() {
-    if (useMock) return mockUserApi.getMe()
     return client.get('/users/me')
   },
 
+  /** PATCH /users/me */
   updateMe(data) {
-    if (useMock) return mockUserApi.updateMe(data)
     return client.patch('/users/me', data)
   },
 }
