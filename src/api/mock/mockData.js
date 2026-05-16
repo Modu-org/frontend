@@ -121,18 +121,15 @@ export const MOCK_ATTRACTIONS = [
   },
 ]
 
-/** user 테이블 + API /users/me 응답 구조 */
+/** user + user_detail 테이블 — API /users/me 응답 구조 */
 export const MOCK_USER = {
   userId: 1,
   userName: 'test01',
   nickname: '김여행',
   profileImg: null,
-  ageGroupCode: 2,
-  tripStyleCode: 1,
-  usesWheelchair: false,
-  hasStroller: false,
-  usesWalkingAid: false,
-  hasServiceDog: false,
-  needsVisualAssistance: false,
-  uiMode: 'STANDARD',
+  physical: 0,
+  visual: 0,
+  hearing: 0,
+  infantFamily: 0,
 }
+
