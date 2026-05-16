@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/authStore'
 
 const routes = [
   {
@@ -12,7 +12,7 @@ const routes = [
     path: '/onboarding',
     name: 'Onboarding',
     component: () => import('@/pages/OnboardingPage.vue'),
-    meta: { requiresAuth: true, layout: 'auth' },
+    meta: { layout: 'auth' },
   },
   {
     path: '/',
@@ -73,36 +73,24 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const userStore = useUserStore()
+  const authStore = useAuthStore()
 
-  // 로그인 페이지: 이미 인증된 사용자는 홈으로
+  // 로그인 페이지: 이미 인증된 사용자는 redirect 또는 홈으로
   if (to.meta.requiresAuth === false) {
-    if (userStore.isAuthenticated) return { name: 'Home' }
+    if (authStore.isAuthenticated) {
+      return to.query.redirect ? to.query.redirect : { name: 'Home' }
+    }
     return true
   }
 
-  // 게스트 허용 페이지
-  if (to.meta.guestAllowed) {
-    if (userStore.isAuthenticated && !userStore.hasProfile) {
-      const skipUntil = localStorage.getItem('skipOnboardingUntil')
-      if (!skipUntil || Date.now() > Number(skipUntil)) {
-        return { name: 'Onboarding' }
-      }
-    }
+  // 게스트 허용 페이지 / 레이아웃 전용 페이지(온보딩 등)
+  if (to.meta.guestAllowed || !to.meta.requiresAuth) {
     return true
   }
 
   // 인증 필요 페이지
-  if (!userStore.isAuthenticated) {
+  if (!authStore.isAuthenticated) {
     return { name: 'Login', query: { redirect: to.fullPath } }
-  }
-
-  // 프로필 설정 확인
-  if (to.name !== 'Onboarding' && !userStore.hasProfile) {
-    const skipUntil = localStorage.getItem('skipOnboardingUntil')
-    if (!skipUntil || Date.now() > Number(skipUntil)) {
-      return { name: 'Onboarding' }
-    }
   }
 
   return true

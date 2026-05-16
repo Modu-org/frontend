@@ -84,14 +84,14 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseListItem from '@/components/common/BaseListItem.vue'
 import AttractionCard from '@/components/attraction/AttractionCard.vue'
-import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/authStore'
 import { MOCK_ATTRACTIONS } from '@/api/mock/mockData'
 import { CONTENT_TYPES } from '@/constants/enums'
 import { useKakaoMap } from '@/composables/useKakaoMap'
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const activeTab = ref('list')
 const keyword = ref(route.query.keyword || '')
@@ -122,7 +122,7 @@ function handleSearch() { /* reactive filtering via computed */ }
 function goToDetail(a) { router.push(`/attraction/${a.attractionId}`) }
 
 function handleAddToSchedule(a) {
-  if (!userStore.isAuthenticated) {
+  if (!authStore.isAuthenticated) {
     router.push({ name: 'Login', query: { redirect: route.fullPath } })
     return
   }

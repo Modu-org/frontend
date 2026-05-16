@@ -1,35 +1,19 @@
 import axios from 'axios'
-
-/**
- * 쿠키 헬퍼 함수
- */
-function getCookie(name) {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
-  return match ? decodeURIComponent(match[2]) : null
-}
-
-export function setCookie(name, value, days = 7) {
-  const d = new Date()
-  d.setTime(d.getTime() + days * 86400000)
-  document.cookie = `${name}=${encodeURIComponent(value)};expires=${d.toUTCString()};path=/`
-}
-
-export function removeCookie(name) {
-  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
-}
+import { getAccessToken, setAccessToken, clearAccessToken } from './tokenStore'
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
+  withCredentials: true, // httpOnly refresh cookie 자동 전송
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-/** Request 인터셉터 — 쿠키에서 토큰 읽어 Authorization 헤더 자동 첨부 */
+/** Request 인터셉터 — 메모리의 accessToken을 Authorization 헤더에 첨부 */
 client.interceptors.request.use(
   (config) => {
-    const token = getCookie('accessToken') || localStorage.getItem('accessToken')
+    const token = getAccessToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -38,40 +22,37 @@ client.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-/** Response 인터셉터 — 401 시 토큰 갱신 또는 로그아웃 */
+/**
+ * Response 인터셉터 — 401 시 /auth/refresh로 토큰 재발급
+ */
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+    const isAuthRequest = originalRequest.url?.includes('/auth/')
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-
-      try {
-        const refreshToken = getCookie('refreshToken') || localStorage.getItem('refreshToken')
-        if (!refreshToken) throw new Error('No refresh token')
-
-        const { data: res } = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
-          { refreshToken }
-        )
-        const newToken = res.data?.accessToken || res.accessToken
-
-        setCookie('accessToken', newToken, 7)
-        localStorage.setItem('accessToken', newToken)
-        originalRequest.headers.Authorization = `Bearer ${newToken}`
-        return client(originalRequest)
-      } catch {
-        removeCookie('accessToken')
-        removeCookie('refreshToken')
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        window.location.href = '/login'
-        return Promise.reject(error)
-      }
+    // auth 관련 요청이 401이면 재시도 없이 바로 reject
+    if (isAuthRequest || !error.response || error.response.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error)
     }
 
-    return Promise.reject(error)
+    originalRequest._retry = true
+
+    try {
+      const { data: res } = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      )
+      const newToken = res.data?.accessToken || res.accessToken
+
+      setAccessToken(newToken)
+      originalRequest.headers.Authorization = `Bearer ${newToken}`
+      return client(originalRequest)
+    } catch {
+      clearAccessToken()
+      return Promise.reject(error)
+    }
   }
 )
 

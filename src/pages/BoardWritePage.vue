@@ -66,12 +66,12 @@ import { MOCK_ATTRACTIONS } from '@/api/mock/mockData'
 const route = useRoute()
 const router = useRouter()
 
-const categories = ['여행지 추천', '여행지 불편사항 제보', '건의사항', '기타']
+const categories = ['여행 후기', '여행지 불편사항 제보']
 
 const attractionName = ref('')
 
 const form = ref({
-  category: '기타',
+  category: '여행 후기',
   title: '',
   content: '',
 })
@@ -81,14 +81,14 @@ onMounted(() => {
     const att = MOCK_ATTRACTIONS.find(item => item.attractionId === String(route.query.attractionId))
     if (att) attractionName.value = att.name
   }
-  if (route.query.type === '제보') form.value.category = '여행지 불편사항 제보'
-  else if (route.query.type === '추천') form.value.category = '여행지 추천'
+  if (route.query.type === 1) form.value.category = '여행지 불편사항 제보'
+  else form.value.category = '여행 후기'
 })
 
 const isValid = computed(() => form.value.category && form.value.title.trim() && form.value.content.trim())
 
 function handleSubmit() {
-  alert('게시글이 성공적으로 등록되었습니다. (MVP)')
+  alert('게시글이 성공적으로 등록되었습니다.')
   router.back()
 }
 </script>

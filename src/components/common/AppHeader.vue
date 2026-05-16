@@ -2,7 +2,7 @@
   <header class="sticky top-0 z-50 h-[var(--header-height)]">
     <!-- Web Nav -->
     <nav class="hidden md:flex bg-white w-full justify-between items-center px-6 py-4 shadow-sm shadow-[var(--color-on-surface)]/5 h-full">
-      <img src="/images/logo.png" alt="첫 화면으로 이동" class="w-38 cursor-pointer" @click="$router.push('/')" />
+      <img src="/images/logo.png" alt="다온길 로고(홈으로 이동)" class="w-38 cursor-pointer" @click="$router.push('/')" />
       <div class="flex gap-6 items-center">
         <router-link
           v-for="item in navItems"
@@ -19,11 +19,15 @@
         </router-link>
       </div>
       <div class="flex items-center gap-3">
-        <template v-if="userStore.isAuthenticated">
-          <router-link to="/profile" class="flex items-center gap-2 text-sm font-bold text-[var(--color-on-surface)] hover:text-[var(--color-primary)] transition-colors px-3 py-1.5 rounded-full hover:bg-[var(--color-surface-container)]">
-            <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">account_circle</span>
-            {{ userStore.userName }}
+        <template v-if="authStore.isAuthenticated">
+          <span class="greeting-text">{{ authStore.nickname }}님, 즐거운 여행하세요!</span>
+          <router-link to="/profile" class="profile-circle" aria-label="마이페이지로 이동">
+            <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
+            <span v-else class="material-symbols-outlined profile-circle__icon" style="font-variation-settings: 'FILL' 1;">person</span>
           </router-link>
+          <button class="logout-btn" aria-label="로그아웃" @click="handleLogout">
+            <span class="material-symbols-outlined">logout</span>
+          </button>
         </template>
         <template v-else>
           <router-link to="/login" class="text-sm font-bold text-[var(--color-primary)] hover:underline">로그인</router-link>
@@ -45,27 +49,75 @@
       <h1 v-if="title" class="text-lg font-extrabold tracking-tighter text-[var(--color-primary)]">
         {{ title }}
       </h1>
-      <img v-else src="/images/logo.png" alt="모두의 여행 로고(홈으로 이동)" class="h-6 cursor-pointer" @click="$router.push('/')" />
-      <span class="material-symbols-outlined text-[var(--color-on-surface)] text-2xl cursor-pointer">
-        notifications
+      <img v-else src="/images/logo.png" alt="다온길 로고(홈으로 이동)" class="h-6 cursor-pointer" @click="$router.push('/')" />
+      <!-- Mobile: 프로필 or 알림 -->
+      <router-link v-if="authStore.isAuthenticated" to="/profile" class="profile-circle profile-circle--sm" aria-label="마이페이지">
+        <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
+        <span v-else class="material-symbols-outlined profile-circle__icon" style="font-variation-settings: 'FILL' 1;">person</span>
+      </router-link>
+      <span v-else class="material-symbols-outlined text-[var(--color-on-surface)] text-2xl cursor-pointer" @click="$router.push('/login')">
+        login
       </span>
     </div>
   </header>
 </template>
 
 <script setup>
-import { useUserStore } from '@/stores/userStore'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
+import { useToast } from '@/composables/useToast'
 
 defineProps({
   title: { type: String, default: '' },
   showBack: { type: Boolean, default: false },
 })
 
-const userStore = useUserStore()
+const router = useRouter()
+const authStore = useAuthStore()
+const { showToast } = useToast()
 
 const navItems = [
   { to: '/', label: '홈' },
   { to: '/recommend', label: '관광지' },
   { to: '/mypage', label: '내 여행' },
 ]
+
+async function handleLogout() {
+  await authStore.logout()
+  showToast('로그아웃되었습니다.', 'info')
+  router.push('/')
+}
 </script>
+
+<style scoped>
+.greeting-text {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+}
+
+.profile-circle {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: box-shadow 0.2s;
+  overflow: hidden; flex-shrink: 0;
+}
+.profile-circle:hover { box-shadow: var(--shadow-md); }
+
+.profile-circle--sm { width: 34px; height: 34px; }
+
+.profile-circle__img { width: 100%; height: 100%; object-fit: cover; }
+.profile-circle__icon { font-size: 22px; color: var(--color-on-primary); }
+.profile-circle--sm .profile-circle__icon { font-size: 18px; }
+
+.logout-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: var(--color-surface-container); color: var(--color-outline);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.logout-btn:hover { background: var(--color-error-container); color: var(--color-error); }
+.logout-btn .material-symbols-outlined { font-size: 20px; }
+</style>

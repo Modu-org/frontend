@@ -140,12 +140,12 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import AccessibilityBadge from '@/components/common/AccessibilityBadge.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
-import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/authStore'
 import { MOCK_ATTRACTIONS } from '@/api/mock/mockData'
 
 const route = useRoute()
 const router = useRouter()
-const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const attraction = ref(null)
 const isFavorite = ref(false)
@@ -164,7 +164,7 @@ const activeBadges = computed(() => {
 })
 
 function requireAuth() {
-  if (!userStore.isAuthenticated) {
+  if (!authStore.isAuthenticated) {
     if (confirm('로그인이 필요한 서비스입니다. 로그인 페이지로 이동하시겠습니까?')) {
       router.push({ name: 'Login', query: { redirect: route.fullPath } })
     }
