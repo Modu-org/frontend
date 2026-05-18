@@ -4,7 +4,7 @@ import { getAccessToken, setAccessToken, clearAccessToken } from './tokenStore'
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
-  withCredentials: true, // httpOnly refresh cookie 자동 전송
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -24,19 +24,40 @@ client.interceptors.request.use(
 
 /**
  * Response 인터셉터 — 401 시 /auth/refresh로 토큰 재발급
+ * 동시에 다수의 401 에러가 발생하는 경우 대응 
+ * isRefreshing 플래그 + 대기열로 중복 refresh 방지
  */
+let isRefreshing = false
+let pendingQueue = []
+
+const flushQueue = (token) =>
+  pendingQueue.splice(0).forEach(({ resolve }) => resolve(token))
+const rejectQueue = (err) =>
+  pendingQueue.splice(0).forEach(({ reject }) => reject(err))
+
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
     const isAuthRequest = originalRequest.url?.includes('/auth/')
 
-    // auth 관련 요청이 401이면 재시도 없이 바로 reject
     if (isAuthRequest || !error.response || error.response.status !== 401 || originalRequest._retry) {
       return Promise.reject(error)
     }
 
     originalRequest._retry = true
+
+    // 이미 refresh 진행 중이면 대기열에 등록
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        pendingQueue.push({ resolve, reject })
+      }).then((token) => {
+        originalRequest.headers.Authorization = `Bearer ${token}`
+        return client(originalRequest)
+      })
+    }
+
+    isRefreshing = true
 
     try {
       const { data: res } = await axios.post(
@@ -47,11 +68,15 @@ client.interceptors.response.use(
       const newToken = res.data?.accessToken || res.accessToken
 
       setAccessToken(newToken)
+      flushQueue(newToken)
       originalRequest.headers.Authorization = `Bearer ${newToken}`
       return client(originalRequest)
-    } catch {
+    } catch (refreshError) {
       clearAccessToken()
+      rejectQueue(refreshError)
       return Promise.reject(error)
+    } finally {
+      isRefreshing = false
     }
   }
 )

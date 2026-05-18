@@ -2,8 +2,11 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi, userApi } from '@/api/authApi'
 import { setAccessToken, clearAccessToken, tokenRef } from '@/api/tokenStore'
+import { useToast } from '@/composables/useToast'
 
 export const useAuthStore = defineStore('auth', () => {
+  const { showToast } = useToast()
+
   const user = ref(null)
   const isLoading = ref(false)
 
@@ -71,8 +74,6 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (err) {
       if (!silent) {
-        const { useToast } = await import('@/composables/useToast')
-        const { showToast } = useToast()
         showToast('사용자 정보를 불러오지 못했습니다.', 'error')
       }
       throw err
