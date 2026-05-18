@@ -71,6 +71,27 @@
           </BaseButton>
         </div>
       </form>
+
+      <!-- 소셜 로그인 구분선 -->
+      <div v-if="activeTab === 'login'" class="social-divider">
+        <span>또는</span>
+      </div>
+
+      <!-- 소셜 로그인 버튼 -->
+      <div v-if="activeTab === 'login'" class="social-buttons">
+        <button class="social-btn social-btn--kakao" @click="socialLogin('kakao')">
+          <img src="/images/kakao.png" alt="" width="40" height="40" onerror="this.style.display='none'" />
+          카카오 로그인
+        </button>
+        <button class="social-btn social-btn--google" @click="socialLogin('google')">
+          <img src="/images/google.png" alt="" width="40" height="40" onerror="this.style.display='none'" />
+          Google 로그인
+        </button>
+        <button class="social-btn social-btn--naver" @click="socialLogin('naver')">
+          <img src="/images/naver.png" alt="" width="40" height="40" onerror="this.style.display='none'" />
+          네이버 로그인
+        </button>
+      </div>
     </BaseCard>
   </AuthLayout>
 </template>
@@ -156,6 +177,11 @@ async function handleSubmit() {
     serverError.value = err?.response?.data?.message || '오류가 발생했습니다. 다시 시도해주세요.'
   }
 }
+
+function socialLogin(provider) {
+  const serverUrl = import.meta.env.VITE_API_SERVER_URL || ''
+  window.location.href = `${serverUrl}/oauth2/authorization/${provider}`
+}
 </script>
 
 <style scoped>
@@ -198,4 +224,35 @@ async function handleSubmit() {
 .id-check-msg { font-size: var(--font-size-sm); font-weight: 500; margin-top: -8px; padding-left: 4px; }
 .id-check-msg--ok { color: #2E7D52; }
 .id-check-msg--fail { color: var(--color-error); }
+
+.social-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 24px 0 16px; color: var(--color-outline);
+  font-size: var(--font-size-sm);
+}
+.social-divider::before,
+.social-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--color-outline-variant);
+}
+
+.social-buttons { display: flex; flex-direction: column; gap: 10px; }
+
+.social-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 12px; border-radius: var(--radius-DEFAULT);
+  font-size: var(--font-size-base); font-weight: 600;
+  border: 1px solid var(--color-outline-variant);
+  cursor: pointer; transition: all 0.2s;
+}
+.social-btn:hover { box-shadow: var(--shadow-md); }
+
+.social-btn--kakao { background: #FEE500; color: #191919; border-color: #FEE500; }
+.social-btn--kakao:hover { background: #F5DC00; }
+
+.social-btn--google { background: #fff; color: #444; }
+.social-btn--google:hover { background: #f8f8f8; }
+
+.social-btn--naver { background: #03C75A; color: #fff; border-color: #03C75A; }
+.social-btn--naver:hover { background: #02b351; }
 </style>

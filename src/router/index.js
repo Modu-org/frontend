@@ -15,6 +15,12 @@ const routes = [
     meta: { layout: 'auth' },
   },
   {
+    path: '/oauth/success',
+    name: 'OAuthCallback',
+    component: () => import('@/pages/OAuthCallbackPage.vue'),
+    meta: { layout: 'auth' },
+  },
+  {
     path: '/',
     name: 'Home',
     component: () => import('@/pages/HomePage.vue'),

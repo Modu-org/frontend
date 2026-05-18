@@ -21,13 +21,6 @@
         label="닉네임"
         placeholder="닉네임을 입력하세요"
       />
-      <BaseInput
-        v-model="editForm.password"
-        label="비밀번호 변경"
-        type="password"
-        placeholder="변경 시에만 입력하세요"
-        style="margin-top: 16px;"
-      />
     </BaseCard>
 
     <!-- 접근성 정보 수정 -->
@@ -99,7 +92,6 @@ const isSaving = ref(false)
 
 const editForm = reactive({
   nickname: '',
-  password: '',
   physical: 0,
   visual: 0,
   hearing: 0,
@@ -110,7 +102,6 @@ const editForm = reactive({
 watch(() => authStore.user, (u) => {
   if (u) {
     editForm.nickname = u.nickname || ''
-    editForm.password = ''
     editForm.physical = u.physical || 0
     editForm.visual = u.visual || 0
     editForm.hearing = u.hearing || 0
@@ -122,16 +113,12 @@ async function handleSave() {
   isSaving.value = true
   try {
     const payload = {
-      userId: authStore.user?.userId,
+      userName: authStore.user?.userName,
       nickname: editForm.nickname,
       physical: editForm.physical,
       visual: editForm.visual,
       hearing: editForm.hearing,
       infant_family: editForm.infantFamily,
-    }
-    // 비밀번호는 입력한 경우에만 전송
-    if (editForm.password.trim()) {
-      payload.password = editForm.password
     }
     await authStore.updateMe(payload)
     // 닉네임 반영을 위해 로컬 user 갱신
@@ -142,7 +129,7 @@ async function handleSave() {
       authStore.user.hearing = editForm.hearing
       authStore.user.infantFamily = editForm.infantFamily
     }
-    editForm.password = ''
+
     showToast('정보가 저장되었습니다.', 'success')
   } catch (err) {
     showToast(err?.response?.data?.message || '저장 중 오류가 발생했습니다.', 'error')
