@@ -15,6 +15,12 @@ const routes = [
     meta: { layout: 'auth' },
   },
   {
+    path: '/oauth/success',
+    name: 'OAuthCallback',
+    component: () => import('@/pages/OAuthCallbackPage.vue'),
+    meta: { layout: 'auth' },
+  },
+  {
     path: '/',
     name: 'Home',
     component: () => import('@/pages/HomePage.vue'),
@@ -78,7 +84,9 @@ router.beforeEach(async (to) => {
   // 로그인 페이지: 이미 인증된 사용자는 redirect 또는 홈으로
   if (to.meta.requiresAuth === false) {
     if (authStore.isAuthenticated) {
-      return to.query.redirect ? to.query.redirect : { name: 'Home' }
+      return to.query.redirect
+        ? { path: decodeURIComponent(to.query.redirect) }
+        : { name: 'Home' }
     }
     return true
   }
