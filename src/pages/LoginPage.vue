@@ -80,11 +80,11 @@
       <!-- 소셜 로그인 버튼 -->
       <div v-if="activeTab === 'login'" class="social-buttons">
         <button class="social-btn social-btn--kakao" @click="socialLogin('kakao')">
-          <img src="/images/kakao.png" alt="" width="40" height="40" onerror="this.style.display='none'" />
+          <img src="/images/kakao.png" alt="" width="35" height="35" onerror="this.style.display='none'" />
           카카오 로그인
         </button>
         <button class="social-btn social-btn--google" @click="socialLogin('google')">
-          <img src="/images/google.png" alt="" width="40" height="40" onerror="this.style.display='none'" />
+          <img src="/images/google.png" alt="" width="50" height="50" onerror="this.style.display='none'" />
           Google 로그인
         </button>
         <button class="social-btn social-btn--naver" @click="socialLogin('naver')">
