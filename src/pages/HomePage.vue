@@ -1,197 +1,216 @@
 <template>
   <DefaultLayout>
-    <!-- Hero Banner with Search -->
-    <section class="relative -mx-[var(--space-md)] md:-mx-8 -mt-6 mb-10 overflow-hidden rounded-b-[32px] md:rounded-[var(--radius-lg)]">
-      <div class="relative h-[400px] md:h-[480px]">
-        <img
-          src="https://images.unsplash.com/photo-1548115184-bc6544d06a58?w=1600&q=80"
-          alt="대한민국 여행"
-          class="w-full h-full object-cover"
-        />
-        <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/70" />
-        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <h1 class="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-[1.15] mb-3 drop-shadow-lg">
-            여행의 즐거움,<br/>모두가 누릴 수 있도록
-          </h1>
-          <p class="text-base md:text-lg text-white/85 mb-8 max-w-xl">
-            모두가 즐길 수 있는 여행을 다온길과 함께 계획해보세요.
-          </p>
+    <!-- Hero Banner: 전체 너비 슬롯 -->
+    <template #full-bleed>
+      <section class="hero">
+        <div class="hero__bg">
+          <img
+            src="https://images.unsplash.com/photo-1548115184-bc6544d06a58?w=1600&q=80"
+            alt="대한민국 여행"
+            class="hero__img"
+          />
+          <div class="hero__overlay" />
+        </div>
+        <div class="hero__content">
+          <h1 class="hero__title">여행의 즐거움,<br/>모두가 누릴 수 있도록</h1>
+          <p class="hero__subtitle">모두가 즐길 수 있는 여행을 다온길과 함께 계획해보세요.</p>
+
           <!-- Search Bar -->
-          <div class="w-full max-w-xl bg-white rounded-full flex items-center gap-2 px-2 py-2 shadow-2xl">
-            <span class="material-symbols-outlined text-[var(--color-primary)] ml-4 text-2xl">search</span>
+          <div class="search-bar">
+            <span class="material-symbols-outlined search-bar__icon">search</span>
             <input
               v-model="searchQuery"
-              class="flex-1 bg-transparent outline-none text-[var(--color-on-surface)] placeholder-[var(--color-outline)] px-2 py-2 text-base"
-              placeholder="어디로 여행할까요? 관광지를 검색해보세요"
+              class="search-bar__input"
+              placeholder="관광지명을 입력하세요"
               @keyup.enter="handleSearch"
             />
             <button
-              class="bg-[var(--color-primary)] text-white px-6 py-2.5 rounded-full font-bold text-sm hover:brightness-110 transition-all active:scale-95 flex-shrink-0"
-              @click="handleSearch"
+              v-if="voiceSearch.isSupported.value"
+              :class="['search-bar__mic', { 'search-bar__mic--active': voiceSearch.isListening.value }]"
+              :aria-label="voiceSearch.isListening.value ? '음성 인식 중지' : '음성으로 검색'"
+              @click="handleVoiceSearch"
             >
-              검색
+              <span class="material-symbols-outlined">{{ voiceSearch.isListening.value ? 'mic_off' : 'mic' }}</span>
             </button>
+            <BaseButton size="sm" @click="handleSearch">검색</BaseButton>
           </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Section 1: 맞춤 추천 (로그인 사용자만) -->
-    <section v-if="isLoggedIn && hasProfile" class="mb-12">
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--color-on-surface)] tracking-tight">
-            {{ authStore.nickname }}님을 위한 맞춤 추천
-          </h2>
-          <p class="text-sm text-[var(--color-on-surface-variant)] mt-1">프로필 기반으로 추천해드려요</p>
+          <p v-if="voiceSearch.isListening.value" class="hero__voice-hint">
+            🎙️ 듣고 있어요... "서울에서 휠체어 가능한 공원 찾아줘"
+          </p>
         </div>
-        <router-link to="/recommend" class="text-sm font-bold text-[var(--color-primary)] hover:underline flex-shrink-0">
-          전체 보기 →
-        </router-link>
-      </div>
-      <div class="scroll-row">
-        <div v-for="item in customItems" :key="item.attractionId" class="scroll-card">
-          <AttractionCard :attraction="item" @select="goToDetail" @add="handleAdd" />
-        </div>
-      </div>
-    </section>
+      </section>
+    </template>
 
-    <!-- Section 2: 부모님과 함께 하기 좋은 인기 관광지 -->
-    <section class="mb-12">
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--color-on-surface)] tracking-tight flex items-center gap-2">
-            <span class="material-symbols-outlined text-orange-500">family_restroom</span>
-            부모님과 함께 하기 좋은 인기 관광지
-          </h2>
-          <p class="text-sm text-[var(--color-on-surface-variant)] mt-1">어르신 동반 여행에 적합한 관광지입니다</p>
-        </div>
-        <router-link to="/recommend" class="text-sm font-bold text-[var(--color-primary)] hover:underline flex-shrink-0">
-          전체 보기 →
-        </router-link>
-      </div>
-      <div class="scroll-row">
-        <div v-for="item in parentsItems" :key="item.attractionId" class="scroll-card">
-          <AttractionCard :attraction="item" @select="goToDetail" @add="handleAdd" />
-        </div>
-      </div>
-    </section>
-
-    <!-- Section 3: 휠체어로도 편한 여행 -->
-    <section class="mb-12">
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--color-on-surface)] tracking-tight flex items-center gap-2">
-            <span class="material-symbols-outlined text-green-600">accessible_forward</span>
-            휠체어로도 편한 여행 목록
-          </h2>
-          <p class="text-sm text-[var(--color-on-surface-variant)] mt-1">배리어프리 인증 관광지 모음</p>
-        </div>
-        <router-link to="/recommend" class="text-sm font-bold text-[var(--color-primary)] hover:underline flex-shrink-0">
-          전체 보기 →
-        </router-link>
-      </div>
-      <div class="scroll-row">
-        <div v-for="item in wheelchairItems" :key="item.attractionId" class="scroll-card">
-          <AttractionCard :attraction="item" @select="goToDetail" @add="handleAdd" />
-        </div>
-      </div>
-    </section>
-
-    <!-- Section 4: 지역별 관광지 -->
-    <section class="mb-12">
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--color-on-surface)] tracking-tight flex items-center gap-2">
-            <span class="material-symbols-outlined text-[var(--color-primary)]">map</span>
-            지역별 관광지
-          </h2>
-          <p class="text-sm text-[var(--color-on-surface-variant)] mt-1">원하는 지역을 선택해 관광지를 둘러보세요</p>
-        </div>
-      </div>
-      <!-- Region Tabs -->
-      <div class="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-5">
+    <!-- 주요 도시 카드 -->
+    <section class="cities-section">
+      <h2 class="section-title">
+        <span class="material-symbols-outlined section-title__icon">map</span>
+        어디로 떠나볼까요?
+      </h2>
+      <div class="city-grid">
         <button
-          v-for="region in REGIONS"
-          :key="region"
-          :class="[
-            'flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300',
-            selectedRegion === region
-              ? 'bg-[var(--color-primary)] text-white shadow-md'
-              : 'bg-[var(--color-surface-container-lowest)] text-[var(--color-on-surface-variant)] ghost-border hover:bg-[var(--color-surface-container)]'
-          ]"
-          @click="selectedRegion = region"
+          v-for="city in CITY_CARDS"
+          :key="city.code"
+          class="city-card"
+          @click="goToCitySearch(city)"
         >
-          {{ region }}
+          <img :src="city.image" :alt="city.name" class="city-card__img" />
+          <div class="city-card__overlay" />
+          <div class="city-card__info">
+            <span class="city-card__name">{{ city.name }}</span>
+            <span class="city-card__sub">{{ city.desc }}</span>
+          </div>
         </button>
-      </div>
-      <div class="scroll-row">
-        <div v-for="item in regionItems" :key="item.attractionId" class="scroll-card">
-          <AttractionCard :attraction="item" @select="goToDetail" @add="handleAdd" />
-        </div>
       </div>
     </section>
   </DefaultLayout>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import AttractionCard from '@/components/attraction/AttractionCard.vue'
-import { useAuthStore } from '@/stores/authStore'
-import { MOCK_ATTRACTIONS } from '@/api/mock/mockData'
+import BaseButton from '@/components/common/BaseButton.vue'
+import { attractionApi } from '@/api/attractionApi'
+import { useVoiceSearch } from '@/composables/useVoiceSearch'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const voiceSearch = useVoiceSearch()
+const { showToast } = useToast()
 
 const searchQuery = ref('')
-const selectedRegion = ref('서울')
 
-const REGIONS = ['서울', '부산', '제주', '경주', '강릉', '전주']
-
-const isLoggedIn = computed(() => authStore.isAuthenticated)
-const hasProfile = computed(() => authStore.hasProfile)
-
-const customItems = ref(MOCK_ATTRACTIONS.slice(0, 4))
-const parentsItems = ref([...MOCK_ATTRACTIONS].filter(a => a.accessibilitySummary?.ramp === 'AVAILABLE'))
-const wheelchairItems = ref([...MOCK_ATTRACTIONS].filter(a => a.accessibilitySummary?.wheelchair === 'AVAILABLE'))
-const regionItems = computed(() => MOCK_ATTRACTIONS)
+const CITY_CARDS = [
+  { code: '11', name: '서울',   desc: '수도권 핵심 관광',  image: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=600&q=80' },
+  { code: '41', name: '경기도', desc: '다양한 테마파크',    image: 'https://images.unsplash.com/photo-1596076282690-91e4e7e2d1cb?w=600&q=80' },
+  { code: '26', name: '부산',   desc: '바다와 미식의 도시', image: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?w=600&q=80' },
+  { code: '27', name: '대구',   desc: '역사와 문화의 도시', image: 'https://images.unsplash.com/photo-1617469767053-d3b523a0b982?w=600&q=80' },
+  { code: '50', name: '제주도', desc: '자연의 보물섬',      image: 'https://images.unsplash.com/photo-1579169825453-22a8e5c77eb4?w=600&q=80' },
+  { code: '51', name: '강원도', desc: '산과 바다의 조화',   image: 'https://images.unsplash.com/photo-1598517835058-4e3a6f105081?w=600&q=80' },
+  { code: '28', name: '인천',   desc: '섬과 개항의 역사',   image: 'https://images.unsplash.com/photo-1625220194993-0a0f3a3b0614?w=600&q=80' },
+  { code: '29', name: '광주',   desc: '예술과 맛의 도시',   image: 'https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?w=600&q=80' },
+]
 
 function handleSearch() {
   if (!searchQuery.value.trim()) return
-  router.push({ path: '/recommend', query: { keyword: searchQuery.value } })
+  router.push({ path: '/attractions', query: { keyword: searchQuery.value } })
 }
 
-function goToDetail(attraction) {
-  router.push(`/attraction/${attraction.attractionId}`)
-}
+async function handleVoiceSearch() {
+  if (voiceSearch.isListening.value) { voiceSearch.stopListening(); return }
+  try {
+    // 1. STT: 음성 → 텍스트
+    const { raw } = await voiceSearch.listenAndParse()
+    showToast(`🎙️ "${raw}"`, 'info')
 
-function handleAdd(attraction) {
-  if (!authStore.isAuthenticated) {
-    router.push({ name: 'Login', query: { redirect: '/' } })
-    return
+    // 2. 백엔드 AI 파싱 + 관광지 검색
+    const { data: res } = await attractionApi.voiceSearch(raw, 1)
+    const results = res.data?.content ?? res.data ?? []
+
+    // 3. 결과를 state로 전달하여 목록 페이지로 이동
+    router.push({
+      path: '/attractions',
+      query: { voiceQuery: raw },
+      state: {
+        voiceResults: results,
+        voiceParsedFilters: res.data?.parsedFilters ?? null,
+      },
+    })
+  } catch (err) {
+    showToast(err.message || '음성 검색에 실패했습니다.', 'error')
   }
-  alert(`${attraction.name}을(를) 일정에 추가했습니다.`)
+}
+
+function goToCitySearch(city) {
+  router.push({ path: '/attractions', query: { regionCode: String(city.code) } })
 }
 </script>
 
 <style scoped>
-.scroll-row {
-  display: flex;
-  gap: 20px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* Hero */
+.hero {
+  position: relative; border-radius: var(--radius-lg); overflow: hidden;
+  margin: -1rem -1rem 2rem; min-height: 340px;
 }
-.scroll-row::-webkit-scrollbar { display: none; }
-.scroll-card {
-  min-width: 280px;
-  max-width: 320px;
-  flex-shrink: 0;
+.hero__bg { position: absolute; inset: 0; }
+.hero__img { width: 100%; height: 100%; object-fit: cover; }
+.hero__overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.65)); }
+.hero__content {
+  position: relative; z-index: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 3rem 1.5rem; min-height: 340px;
+}
+.hero__title {
+  font-size: var(--font-size-3xl); font-weight: 700; color: #fff;
+  line-height: 1.2; margin-bottom: 0.5rem;
+}
+.hero__subtitle { font-size: var(--font-size-body); color: rgba(255,255,255,.8); margin-bottom: 1.5rem; }
+.hero__voice-hint { color: rgba(255,255,255,.85); font-size: var(--font-size-sm); margin-top: 0.75rem; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+
+/* Search Bar */
+.search-bar {
+  display: flex; align-items: center; gap: 0.375rem;
+  width: 100%; max-width: 540px; background: #fff;
+  border-radius: var(--radius-full); padding: 0.375rem 0.375rem 0.375rem 1rem;
+}
+.search-bar__icon { color: var(--color-primary); font-size: 1.5rem; flex-shrink: 0; }
+.search-bar__input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: var(--font-size-body); color: var(--color-on-surface);
+  min-width: 0;
+}
+.search-bar__input::placeholder { color: var(--color-outline); }
+
+.search-bar__mic {
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: all 0.18s;
+  background: var(--color-primary-soft); color: var(--color-primary-deep);
+}
+.search-bar__mic:hover { background: var(--color-primary-200); }
+.search-bar__mic--active {
+  background: var(--color-error); color: #fff;
+  animation: pulse-mic 1.2s infinite;
+}
+@keyframes pulse-mic {
+  0%,100% { box-shadow: 0 0 0 0 rgba(254,137,106,.4); }
+  50% { box-shadow: 0 0 0 10px rgba(254,137,106,0); }
 }
 
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+/* Cities */
+.cities-section { margin-bottom: 2rem; }
+.section-title {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: var(--font-size-2xl); font-weight: 700;
+  color: var(--color-on-surface); margin-bottom: 1.25rem;
+}
+.section-title__icon { color: var(--color-primary); font-size: 1.5em; }
+
+.city-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+@media (min-width: 768px) { .city-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.city-card {
+  position: relative; border-radius: var(--radius-DEFAULT); overflow: hidden;
+  aspect-ratio: 4 / 3; cursor: pointer; border: none; padding: 0;
+  transition: transform 0.18s;
+}
+.city-card:active { transform: scale(0.97); }
+.city-card__img { width: 100%; height: 100%; object-fit: cover; }
+.city-card__overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.6), transparent 60%);
+}
+.city-card__info {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 0.75rem; display: flex; flex-direction: column;
+}
+.city-card__name { font-size: var(--font-size-xl); font-weight: 700; color: #fff; }
+.city-card__sub { font-size: var(--font-size-xs); color: rgba(255,255,255,.75); }
 </style>
