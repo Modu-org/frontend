@@ -1,11 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-/**
- * 테마 스토어 — 심플모드 전용 (앱이 장애인·노약자 대상이므로 항상 simple)
- * 사용자가 조절 가능한 것은 글자 크기(fontScale)만 유지
- */
 export const useThemeStore = defineStore('theme', () => {
+  // 1.0 = 기본(16px), 1.25 = 큰글씨(20px), 1.5 = 더 큰글씨(24px)
   const fontScale = ref(Number(localStorage.getItem('fontScale')) || 1.2)
 
   function setFontScale(scale) {
@@ -16,17 +13,14 @@ export const useThemeStore = defineStore('theme', () => {
 
   function applyTheme() {
     const root = document.documentElement
-    // 항상 simple 모드
-    root.setAttribute('data-theme', 'simple')
+    // html font-size를 scale에 맞게 변경 → rem 단위 전체 비례 변경
+    // 이미지(px 고정), 로고(.logo class) 등은 영향 없음
     root.style.setProperty('--font-scale', String(fontScale.value))
+    // html font-size 직접 변경으로 rem 연동
+    root.style.fontSize = `calc(16px * ${fontScale.value})`
   }
 
-  // 앱 시작 시 테마 적용
   applyTheme()
 
-  return {
-    fontScale,
-    setFontScale,
-    applyTheme,
-  }
+  return { fontScale, setFontScale, applyTheme }
 })

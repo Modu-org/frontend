@@ -2,7 +2,7 @@
   <header class="sticky top-0 z-50 h-[var(--header-height)]">
     <!-- Web Nav -->
     <nav class="hidden md:flex bg-white w-full justify-between items-center px-6 py-4 shadow-sm shadow-[var(--color-on-surface)]/5 h-full">
-      <img src="/images/logo.png" alt="다온길 로고(홈으로 이동)" class="w-38 cursor-pointer" @click="$router.push('/')" />
+      <img src="/images/logo.png" alt="다온길 로고(홈으로 이동)" class="logo w-38 cursor-pointer" style="width:152px;height:auto;" @click="$router.push('/')" />
       <div class="flex gap-6 items-center">
         <router-link
           v-for="item in navItems"
@@ -36,7 +36,7 @@
     </nav>
 
     <!-- Mobile Header -->
-    <div class="md:hidden flex items-center justify-between h-full px-[var(--space-md)] bg-glass">
+    <div class="md:hidden flex items-center justify-between h-full px-[var(--space-md)] bg-white shadow-sm shadow-[var(--color-on-surface)]/5">
       <button
         v-if="showBack"
         class="p-2 rounded-[var(--radius-DEFAULT)] hover:bg-[var(--color-surface-container)] transition-colors min-w-[var(--touch-min)] min-h-[var(--touch-min)] flex items-center justify-center"

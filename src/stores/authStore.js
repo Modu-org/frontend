@@ -11,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
 
   const isAuthenticated = computed(() => !!tokenRef.value)
+  const isAdmin = computed(() => user.value?.role === 1)
   const hasProfile = computed(() => {
     if (!user.value) return false
     const u = user.value
@@ -67,6 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
         userName: d.userName,
         nickname: d.nickname,
         profileImg: d.profileImg || null,
+        role: d.role ?? 0,
         physical: d.physical,
         visual: d.visual,
         hearing: d.hearing,
@@ -100,13 +102,38 @@ export const useAuthStore = defineStore('auth', () => {
     return res.data
   }
 
-  /** 앱 초기화 시 세션 복원 */
+  /** 앱 초기화 시 세션 복원 (프록시 → 직접 호출 fallback) */
   async function tryRestoreSession() {
+    // 1차: 프록시 경유 (일반 로그인 쿠키)
     try {
       const { data: res } = await authApi.refresh()
       const newToken = res.data?.accessToken || res.accessToken
-      setAccessToken(newToken)
-      await fetchMe({ silent: true })
+      if (newToken) {
+        setAccessToken(newToken)
+        await fetchMe({ silent: true })
+        return
+      }
+    } catch {
+      // 프록시 실패 → 2차 시도
+    }
+
+    // 2차: 백엔드 직접 호출 (소셜 로그인 쿠키)
+    try {
+      const serverUrl = import.meta.env.VITE_API_SERVER_URL || ''
+      if (!serverUrl) { clearAccessToken(); user.value = null; return }
+
+      const axios = (await import('axios')).default
+      const { data: res } = await axios.post(
+        `${serverUrl}/api/auth/refresh`, {}, { withCredentials: true }
+      )
+      const newToken = res.data?.accessToken || res.accessToken
+      if (newToken) {
+        setAccessToken(newToken)
+        await fetchMe({ silent: true })
+      } else {
+        clearAccessToken()
+        user.value = null
+      }
     } catch {
       clearAccessToken()
       user.value = null
@@ -115,7 +142,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, isLoading,
-    isAuthenticated, hasProfile, nickname,
+    isAuthenticated, isAdmin, hasProfile, nickname,
     login, signup, logout, fetchMe, updateMe, checkId,
     tryRestoreSession,
   }

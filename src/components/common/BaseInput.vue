@@ -2,7 +2,7 @@
   <div class="input-group">
     <label v-if="label" :for="inputId" class="input-label">
       {{ label }}
-      <span v-if="required" class="input-required">*</span>
+      <span v-if="required" class="input-required" aria-hidden="true">*</span>
     </label>
     <div class="input-wrap">
       <input
@@ -19,7 +19,11 @@
       />
       <slot name="suffix" />
     </div>
-    <p v-if="error" :id="`${inputId}-error`" class="input-error" role="alert">{{ error }}</p>
+    <p v-if="error" :id="`${inputId}-error`" class="input-error" role="alert">
+      <span class="material-symbols-outlined" style="font-size:1em;vertical-align:middle;">error</span>
+      {{ error }}
+    </p>
+    <p v-if="hint && !error" class="input-hint">{{ hint }}</p>
   </div>
 </template>
 
@@ -35,6 +39,7 @@ defineProps({
   disabled: { type: Boolean, default: false },
   required: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  hint: { type: String, default: '' },
 })
 
 const model = defineModel({ type: [String, Number], default: '' })
@@ -42,27 +47,53 @@ const inputId = useId()
 </script>
 
 <style scoped>
-.input-group { display: flex; flex-direction: column; gap: 6px; }
-.input-label { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-on-surface-variant); }
-.input-required { color: var(--color-error); }
+.input-group { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.input-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+.input-required { color: var(--color-error-deep); margin-left: 2px; }
+
 .input-wrap { position: relative; }
 
 .input-field {
   width: 100%;
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
   border-radius: var(--radius-DEFAULT);
   background: var(--color-surface-container-low);
   color: var(--color-on-surface);
-  font-size: var(--font-size-base);
+  font-family: inherit;
+  font-size: var(--font-size-body);
   font-weight: 500;
-  border: 2px solid transparent;
+  border: 2px solid var(--color-outline-variant);
   min-height: var(--btn-height);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.18s;
+  outline: none;
 }
-.input-field::placeholder { color: var(--color-outline); font-weight: 400; }
-.input-field:focus { outline: none; border-color: rgba(0,97,150,.4); box-shadow: 0 0 0 4px rgba(0,97,150,.1); }
-.input-field--error { border-color: rgba(186,26,26,.4); }
-.input-field--disabled { opacity: 0.4; cursor: not-allowed; }
+.input-field::placeholder {
+  color: var(--color-outline);
+  font-weight: 400;
+}
+.input-field:focus {
+  border-color: var(--color-primary);
+}
+.input-field--error { border-color: var(--color-error); }
+.input-field--disabled { opacity: 0.45; cursor: not-allowed; }
 
-.input-error { font-size: var(--font-size-xs); color: var(--color-error); font-weight: 500; }
+/* 에러: 색상 단독 금지 → 아이콘 함께 */
+.input-error {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-error-deep);
+  font-weight: 600;
+}
+
+.input-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-on-surface-variant);
+}
 </style>

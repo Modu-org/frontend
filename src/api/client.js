@@ -60,12 +60,34 @@ client.interceptors.response.use(
     isRefreshing = true
 
     try {
-      const { data: res } = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
-        {},
-        { withCredentials: true }
-      )
-      const newToken = res.data?.accessToken || res.accessToken
+      let newToken = null
+
+      // 1차: 프록시 경유 (일반 로그인 쿠키)
+      try {
+        const { data: res } = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
+        newToken = res.data?.accessToken || res.accessToken
+      } catch {
+        // fallback
+      }
+
+      // 2차: 백엔드 직접 호출 (소셜 로그인 쿠키)
+      if (!newToken) {
+        const serverUrl = import.meta.env.VITE_API_SERVER_URL || ''
+        if (serverUrl) {
+          const { data: res } = await axios.post(
+            `${serverUrl}/api/auth/refresh`,
+            {},
+            { withCredentials: true }
+          )
+          newToken = res.data?.accessToken || res.accessToken
+        }
+      }
+
+      if (!newToken) throw new Error('No token')
 
       setAccessToken(newToken)
       flushQueue(newToken)

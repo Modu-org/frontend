@@ -28,11 +28,11 @@
 
     <div class="onboarding__bottom">
       <BaseButton full-width :loading="isSubmitting" @click="handleComplete">
-        가입 완료
+        {{ isSocialMode ? '저장하기' : '가입 완료' }}
         <span class="material-symbols-outlined">check</span>
       </BaseButton>
       <div class="onboarding__skip">
-        <button class="skip-link" @click="handleSkip">건너뛰고 가입하기</button>
+        <button class="skip-link" @click="handleSkip">{{ isSocialMode ? '나중에 설정하기' : '건너뛰고 가입하기' }}</button>
       </div>
     </div>
   </div>
@@ -53,6 +53,9 @@ const { showToast } = useToast()
 const isSubmitting = ref(false)
 const signupData = ref(null)
 
+// 소셜 로그인 후 프로필 설정 모드 (sessionStorage 데이터 없는 경우)
+const isSocialMode = computed(() => authStore.isAuthenticated && !signupData.value)
+
 const form = reactive({
   physical: 0,
   visual: 0,
@@ -66,12 +69,14 @@ const noneSelected = computed(() =>
 
 onMounted(() => {
   const raw = sessionStorage.getItem('signupData')
-  if (!raw) {
-    // 회원가입 데이터 없으면 로그인으로 되돌림
-    router.replace('/login')
+  if (raw) {
+    signupData.value = JSON.parse(raw)
     return
   }
-  signupData.value = JSON.parse(raw)
+  // 소셜 로그인 사용자: 로그인 상태면 프로필 설정 모드로 진행
+  if (!authStore.isAuthenticated) {
+    router.replace('/login')
+  }
 })
 
 function clearAll() {
@@ -85,7 +90,6 @@ async function doSignup() {
   if (!signupData.value) return
   isSubmitting.value = true
   try {
-    // 로그인 페이지 정보 + 온보딩 정보 합쳐서 회원가입 요청
     await authStore.signup({
       userName: signupData.value.userName,
       password: signupData.value.password,
@@ -105,13 +109,37 @@ async function doSignup() {
   }
 }
 
+async function doSocialProfile() {
+  isSubmitting.value = true
+  try {
+    await authStore.updateMe({
+      userName: authStore.user?.userName,
+      nickname: authStore.user?.nickname,
+      physical: form.physical,
+      visual: form.visual,
+      hearing: form.hearing,
+      infant_family: form.infantFamily,
+    })
+    // fetchMe로 프로필 갱신
+    await authStore.fetchMe({ silent: true }).catch(() => {})
+    showToast('접근성 정보가 저장되었습니다! 🎉', 'success')
+    router.push('/')
+  } catch (err) {
+    showToast(err?.response?.data?.message || '저장 중 오류가 발생했습니다.', 'error')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
 function handleComplete() {
-  doSignup()
+  if (isSocialMode.value) doSocialProfile()
+  else doSignup()
 }
 
 function handleSkip() {
   clearAll()
-  doSignup()
+  if (isSocialMode.value) doSocialProfile()
+  else doSignup()
 }
 </script>
 

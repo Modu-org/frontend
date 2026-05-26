@@ -27,9 +27,15 @@ const routes = [
     meta: { guestAllowed: true },
   },
   {
+    path: '/attractions',
+    name: 'AttractionList',
+    component: () => import('@/pages/AttractionListPage.vue'),
+    meta: { guestAllowed: true },
+  },
+  {
     path: '/recommend',
     name: 'Recommend',
-    component: () => import('@/pages/RecommendPage.vue'),
+    component: () => import('@/pages/AttractionListPage.vue'),
     meta: { guestAllowed: true },
   },
   {
