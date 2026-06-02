@@ -4,8 +4,16 @@ import { useToast } from '../composables/useToast'
 
 const { showToast } = useToast()
 
+const isProd = import.meta.env.PROD
+const serverUrl = import.meta.env.VITE_API_SERVER_URL || ''
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
+
+const finalBaseURL = isProd && apiBaseUrl.startsWith('/') && serverUrl
+  ? `${serverUrl.replace(/\/$/, '')}${apiBaseUrl}`
+  : apiBaseUrl
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: finalBaseURL,
   timeout: 10000,
   withCredentials: true,
   headers: {
@@ -67,8 +75,11 @@ client.interceptors.response.use(
 
       // 1차: 프록시 경유 (일반 로그인 쿠키)
       try {
+        const refreshUrl = isProd && apiBaseUrl.startsWith('/') && serverUrl
+          ? `${serverUrl.replace(/\/$/, '')}${apiBaseUrl}/auth/refresh`
+          : `${apiBaseUrl}/auth/refresh`
         const { data: res } = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+          refreshUrl,
           {},
           { withCredentials: true }
         )
