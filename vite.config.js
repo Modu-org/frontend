@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    build: {
+      minify: 'oxc',
+    },
     server: {
       port: 5173,
       allowedHosts: true,
