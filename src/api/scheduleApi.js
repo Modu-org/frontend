@@ -30,7 +30,7 @@ export const scheduleApi = {
   },
 
   getSummary(scheduleId) {
-    if (useMock) return mockScheduleApi.getById(scheduleId) // reuse detail for mock
+    if (useMock) return mockScheduleApi.getById(scheduleId)
     return client.get(`/schedules/${scheduleId}/summary`)
   },
 
@@ -49,14 +49,21 @@ export const scheduleApi = {
     return client.get(`/schedules/${scheduleId}/nodes/${nodeId}`)
   },
 
-  updateNode(scheduleId, nodeId, data) {
-    if (useMock) return mockScheduleApi.updateNode(scheduleId, nodeId, data)
-    return client.patch(`/schedules/${scheduleId}/nodes/${nodeId}`, data)
-  },
-
   deleteNode(scheduleId, nodeId) {
     if (useMock) return mockScheduleApi.deleteNode(scheduleId, nodeId)
     return client.delete(`/schedules/${scheduleId}/nodes/${nodeId}`)
+  },
+
+  // PUT /schedules/{scheduleId}/nodes/placement
+  savePlacement(scheduleId, days) {
+    return client.put(`/schedules/${scheduleId}/nodes/placement`, { days })
+  },
+
+  // POST /schedules/{scheduleId}/auto-arrange
+  autoArrange(scheduleId, data = {}) {
+    return client.post(`/schedules/${scheduleId}/auto-arrange`, data, {
+      timeout: 60000 // 60 seconds timeout for high-latency arrangement calculations
+    })
   },
 
   // --- Edges ---
