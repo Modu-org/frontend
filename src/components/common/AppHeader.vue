@@ -79,7 +79,7 @@ const { showToast } = useToast()
 const navItems = [
   { to: '/', label: '홈' },
   { to: '/recommend', label: '관광지' },
-  { to: '/mypage', label: '내 여행' },
+  { to: '/schedules', label: '내 여행' },
 ]
 
 async function handleLogout() {

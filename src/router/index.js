@@ -51,6 +51,16 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/schedules',
+    name: 'ScheduleList',
+    component: () => import('@/pages/ScheduleListPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/mypage',
+    redirect: '/schedules',
+  },
+  {
     path: '/schedule/:scheduleId/edit',
     name: 'NodeEditor',
     component: () => import('@/pages/NodeEditorPage.vue'),
@@ -59,11 +69,11 @@ const routes = [
   {
     path: '/schedule/:scheduleId',
     name: 'ScheduleDetail',
-    component: () => import('@/pages/TripDetailPage.vue'),
+    component: () => import('@/pages/ScheduleManagePage.vue'),
     meta: { requiresAuth: true },
   },
   {
-    path: '/mypage',
+    path: '/mytravel',
     name: 'MyPage',
     component: () => import('@/pages/MyPage.vue'),
     meta: { requiresAuth: true },
@@ -86,6 +96,11 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
+
+  // 최초 진입 시 세션 복원(tryRestoreSession) 시도가 끝나지 않았다면 대기하여 레이스 컨디션 방지
+  if (!authStore.isInitialized) {
+    await authStore.tryRestoreSession()
+  }
 
   // 로그인 페이지: 이미 인증된 사용자는 redirect 또는 홈으로
   if (to.meta.requiresAuth === false) {
