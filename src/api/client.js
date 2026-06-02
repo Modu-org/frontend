@@ -1,5 +1,8 @@
 import axios from 'axios'
 import { getAccessToken, setAccessToken, clearAccessToken } from './tokenStore'
+import { useToast } from '../composables/useToast'
+
+const { showToast } = useToast()
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -96,6 +99,21 @@ client.interceptors.response.use(
     } catch (refreshError) {
       clearAccessToken()
       rejectQueue(refreshError)
+
+      // 세션 만료 시 로그인 페이지 리다이렉션 처리 (일반 API 요청 401 시)
+      if (!window.__auth_redirecting) {
+        window.__auth_redirecting = true
+        showToast('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error')
+
+        import('@/router').then(({ default: router }) => {
+          router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } })
+          setTimeout(() => { window.__auth_redirecting = false }, 2000)
+        }).catch(() => {
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+          setTimeout(() => { window.__auth_redirecting = false }, 2000)
+        })
+      }
+
       return Promise.reject(error)
     } finally {
       isRefreshing = false

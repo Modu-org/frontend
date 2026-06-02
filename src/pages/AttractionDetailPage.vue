@@ -166,15 +166,24 @@
     <button v-if="attraction" :class="['ai-fab', { 'ai-fab--loading': isAiLoading }]" aria-label="AI 음성 안내" @click="handleAiExplain">
       <span class="material-symbols-outlined" style="font-size:1.6rem;">{{ isAiLoading ? 'hourglass_top' : 'record_voice_over' }}</span>
     </button>
+
+    <!-- 일정 선택 모달 -->
+    <ScheduleSelectModal
+      :visible="schedModal.visible"
+      :attraction-id="schedModal.attractionId"
+      :attraction-name="schedModal.name"
+      @close="schedModal.visible = false"
+    />
   </DefaultLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import ScheduleSelectModal from '@/components/common/ScheduleSelectModal.vue'
 import { attractionApi, postApi } from '@/api/attractionApi'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
@@ -319,9 +328,13 @@ async function submitPost() {
   } catch { showToast('등록에 실패했습니다.', 'error') } finally { isPosting.value = false }
 }
 
+const schedModal = reactive({ visible: false, attractionId: null, name: '' })
+
 function handleAddSchedule() {
   if (!authStore.isAuthenticated) { showToast('로그인이 필요합니다.', 'error'); router.push({ name: 'Login', query: { redirect: route.fullPath } }); return }
-  showToast(`${attraction.value.name}이(가) 일정에 추가되었습니다.`, 'success')
+  schedModal.attractionId = attraction.value.attractionId
+  schedModal.name = attraction.value.name
+  schedModal.visible = true
 }
 function goLogin() { router.push({ name: 'Login', query: { redirect: route.fullPath } }) }
 async function handleAiExplain() {

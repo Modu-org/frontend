@@ -14,7 +14,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     isLoading.value = true
     try {
       const { data: res } = await scheduleApi.getAll()
-      schedules.value = res.data.content
+      schedules.value = res.data;
     } finally {
       isLoading.value = false
     }
