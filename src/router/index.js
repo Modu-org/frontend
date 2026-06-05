@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
+import { useAuthStore } from '@/stores/authStore'
 
 const routes = [
   {
@@ -95,7 +95,6 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const { useAuthStore } = await import('@/stores/authStore')
   const authStore = useAuthStore()
 
   // 최초 진입 시 세션 복원(tryRestoreSession) 시도가 끝나지 않았다면 대기하여 레이스 컨디션 방지
