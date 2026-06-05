@@ -31,3 +31,27 @@ export const CONTENT_TYPES = [
 export const CONTENT_TYPE_MAP = Object.fromEntries(
   CONTENT_TYPES.map((c) => [c.id, c])
 )
+
+/**
+ * contentTypeId별 기본(fallback) 이미지 경로
+ * /public/images/defaults/ 에 위치
+ */
+
+const baseUrl = '/images/defaults'
+export const CONTENT_TYPE_DEFAULT_IMG = {
+  '12': `${baseUrl}/tourist.png`,
+  '14': `${baseUrl}/culture.png`,
+  '15': `${baseUrl}/festival.png`,
+  '25': `${baseUrl}/course.png`,
+  '28': `${baseUrl}/sports.png`,
+  '32': `${baseUrl}/lodging.png`,
+  '38': `${baseUrl}/shopping.png`,
+  '39': `${baseUrl}/restaurant.png`,
+}
+
+export const FALLBACK_IMG = '/images/defaults/tourist.png'
+
+/** contentTypeId로 기본 이미지 경로를 반환 (없으면 관광지 기본이미지) */
+export function getDefaultImg(contentTypeId) {
+  return CONTENT_TYPE_DEFAULT_IMG[String(contentTypeId)] ?? FALLBACK_IMG
+}

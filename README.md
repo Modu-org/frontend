@@ -70,7 +70,7 @@ src/
 │   ├── scheduleApi.js    #   일정·노드·엣지 API
 │   ├── tripApi.js        #   관광지 검색·필터 API
 │   ├── recommendationApi.js  # 추천 API
-│   ├── postApi.js        #   게시판 API
+│   ├── reviewApi.js        #   여행 후기 API
 │   └── mock/             #   Mock API (오프라인 개발용)
 ├── assets/styles/        # 글로벌 CSS (디자인 시스템 토큰)
 ├── components/
