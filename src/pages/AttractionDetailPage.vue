@@ -16,7 +16,7 @@
           :src="heroSrc"
           :alt="attraction.name"
           class="detail-hero__img"
-          @error="e => e.target.src = FALLBACK_IMG"
+          @error="handleImgError"
         />
         <span class="detail-hero__type-badge">{{ getContentTypeLabel(attraction.contentTypeId) }}</span>
       </div>
@@ -95,66 +95,147 @@
               <div ref="mapRef" class="kakao-map"></div>
             </section>
 
-            <!-- 게시글 (여행 후기 + 별점) -->
+            <!-- ★ 리뷰 섹션 -->
             <section class="detail-board">
+              <!-- 헤더 + 필터 -->
               <div class="board-header">
-                <h2 class="detail-section__title" style="margin-bottom:0;">
-                  <span class="material-symbols-outlined">rate_review</span>여행 후기
-                </h2>
-              </div>
-
-              <!-- 작성 폼 -->
-              <div v-if="authStore.isAuthenticated" class="board-write">
-                <!-- 별점 -->
-                <div class="star-row">
-                  <button
-                    v-for="s in 5" :key="s"
-                    :class="['star-btn', { 'star-btn--active': s <= postForm.rate }]"
-                    @click="postForm.rate = s"
-                    :aria-label="`${s}점`"
-                  >★</button>
-                  <span class="star-label">{{ postForm.rate ? `${postForm.rate}점` : '별점 선택' }}</span>
+                <div class="board-header__top">
+                  <h2 class="detail-section__title" style="margin-bottom:0;">
+                    <span class="material-symbols-outlined">rate_review</span>여행 후기
+                    <span v-if="reviews.length" class="review-count">{{ reviews.length }}</span>
+                  </h2>
                 </div>
-                <textarea
-                  v-model="postForm.content"
-                  class="board-write__textarea"
-                  placeholder="여행 후기를 작성해주세요."
-                  rows="3"
-                ></textarea>
-                <div class="board-write__footer">
-                  <label class="privacy-toggle">
-                    <input v-model="postForm.isPrivate" type="checkbox" />
-                    <span class="privacy-toggle__label">
-                      <span class="material-symbols-outlined" style="font-size:1rem;">{{ postForm.isPrivate ? 'lock' : 'lock_open' }}</span>
-                      {{ postForm.isPrivate ? '비밀글' : '공개글' }}
+
+                <!-- 필터 바 -->
+                <div v-if="authStore.isAuthenticated || reviews.length > 0" class="board-filters">
+                  <!-- 내 리뷰만 보기 체크박스 -->
+                  <label v-if="authStore.isAuthenticated" class="filter-check">
+                    <input v-model="filterMineOnly" type="checkbox" @change="loadReviews" />
+                    <span class="filter-check__label">
+                      <span class="material-symbols-outlined" style="font-size:0.95rem;">person</span>
+                      내 리뷰만
                     </span>
                   </label>
-                  <BaseButton size="sm" :loading="isPosting" @click="submitPost">등록</BaseButton>
+
+                  <!-- 정렬 드롭다운 -->
+                  <select v-model="filterSort" class="filter-sort" @change="loadReviews">
+                    <option value="LATEST">최신순</option>
+                    <option value="OLDEST">오래된순</option>
+                    <option value="RATE_DESC">평점 높은순</option>
+                    <option value="RATE_ASC">평점 낮은순</option>
+                  </select>
                 </div>
+              </div>
+
+              <!-- 작성/수정 폼 -->
+              <div v-if="authStore.isAuthenticated" class="board-write">
+                <template v-if="!editingReview">
+                  <!-- 이미 리뷰를 작성한 경우 안내 -->
+                  <div v-if="myReview && !showWriteForm" class="review-written-notice">
+                    <span class="material-symbols-outlined" style="color:var(--color-primary);">check_circle</span>
+                    <span>이 관광지에 리뷰를 작성했습니다.</span>
+                    <button class="notice-edit-btn" @click="startEdit(myReview)">수정</button>
+                  </div>
+
+                  <!-- 작성 폼 -->
+                  <template v-else-if="!myReview || showWriteForm">
+                    <div class="star-row">
+                      <button
+                        v-for="s in 5" :key="s"
+                        :class="['star-btn', { 'star-btn--active': s <= postForm.rate }]"
+                        @click="postForm.rate = s"
+                        :aria-label="`${s}점`"
+                      >★</button>
+                      <span class="star-label">{{ postForm.rate ? `${postForm.rate}점` : '별점 선택' }}</span>
+                    </div>
+                    <textarea
+                      v-model="postForm.content"
+                      class="board-write__textarea"
+                      placeholder="여행 후기를 작성해주세요."
+                      rows="3"
+                    ></textarea>
+                    <div class="board-write__footer">
+                      <label class="privacy-toggle">
+                        <input v-model="postForm.isPrivate" type="checkbox" />
+                        <span class="privacy-toggle__label">
+                          <span class="material-symbols-outlined" style="font-size:1rem;">{{ postForm.isPrivate ? 'lock' : 'lock_open' }}</span>
+                          {{ postForm.isPrivate ? '비밀글' : '공개글' }}
+                        </span>
+                      </label>
+                      <BaseButton size="sm" :loading="isPosting" @click="submitPost">등록</BaseButton>
+                    </div>
+                  </template>
+                </template>
+
+                <!-- 수정 폼 -->
+                <template v-else>
+                  <div class="edit-form-label">
+                    <span class="material-symbols-outlined" style="font-size:1rem;color:var(--color-primary);">edit</span>
+                    리뷰 수정 중
+                    <button class="edit-cancel-btn" @click="cancelEdit">취소</button>
+                  </div>
+                  <div class="star-row">
+                    <button
+                      v-for="s in 5" :key="s"
+                      :class="['star-btn', { 'star-btn--active': s <= editForm.rate }]"
+                      @click="editForm.rate = s"
+                      :aria-label="`${s}점`"
+                    >★</button>
+                    <span class="star-label">{{ editForm.rate ? `${editForm.rate}점` : '별점 선택' }}</span>
+                  </div>
+                  <textarea
+                    v-model="editForm.content"
+                    class="board-write__textarea"
+                    placeholder="수정할 내용을 입력하세요."
+                    rows="3"
+                  ></textarea>
+                  <div class="board-write__footer">
+                    <label class="privacy-toggle">
+                      <input v-model="editForm.isPrivate" type="checkbox" />
+                      <span class="privacy-toggle__label">
+                        <span class="material-symbols-outlined" style="font-size:1rem;">{{ editForm.isPrivate ? 'lock' : 'lock_open' }}</span>
+                        {{ editForm.isPrivate ? '비밀글' : '공개글' }}
+                      </span>
+                    </label>
+                    <BaseButton size="sm" variant="outline" @click="cancelEdit">취소</BaseButton>
+                    <BaseButton size="sm" :loading="isPosting" @click="submitEdit">수정 완료</BaseButton>
+                  </div>
+                </template>
               </div>
               <div v-else class="board-login-prompt">
                 <BaseButton variant="outline" size="sm" @click="goLogin">로그인하고 후기 작성하기</BaseButton>
               </div>
 
               <!-- 후기 목록 -->
-              <div v-if="isPostLoading" class="board-list-loading"><LoadingSpinner /></div>
-              <div v-else-if="filteredPosts.length === 0" class="board-empty">아직 작성된 후기가 없습니다.</div>
+              <div v-if="isReviewLoading" class="board-list-loading"><LoadingSpinner /></div>
+              <div v-else-if="reviews.length === 0" class="board-empty">
+                {{ filterMineOnly ? '작성한 리뷰가 없습니다.' : '아직 작성된 후기가 없습니다.' }}
+              </div>
               <ul v-else class="board-list">
-                <li v-for="post in visiblePosts" :key="post.postId" class="board-list__item">
+                <li v-for="review in visibleReviews" :key="review.reviewId" class="board-list__item">
                   <div class="board-list__meta">
-                    <span class="board-list__nick">{{ post.nickname }}</span>
-                    <span class="board-list__stars" v-if="post.rate">
-                      <span v-for="s in 5" :key="s" :class="['star-icon', s <= post.rate ? 'star-icon--on' : '']">★</span>
+                    <span class="board-list__nick">{{ review.nickname }}</span>
+                    <span class="board-list__stars" v-if="review.rate">
+                      <span v-for="s in 5" :key="s" :class="['star-icon', s <= review.rate ? 'star-icon--on' : '']">★</span>
                     </span>
-                    <span class="board-list__date">{{ formatDate(post.createdAt) }}</span>
-                    <span v-if="post.isPrivate" class="board-list__private">
+                    <span class="board-list__date">{{ formatDate(review.createdAt) }}</span>
+                    <span v-if="review.isPrivate" class="board-list__private">
                       <span class="material-symbols-outlined" style="font-size:0.9rem;">lock</span>비밀글
                     </span>
+                    <!-- 내 리뷰: 수정/삭제 버튼 -->
+                    <div v-if="isMyReview(review)" class="board-list__actions">
+                      <button class="action-btn action-btn--edit" @click="startEdit(review)" title="수정">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                      <button class="action-btn action-btn--delete" @click="deleteReview(review)" title="삭제">
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
                   </div>
-                  <p class="board-list__content">{{ post.content }}</p>
+                  <p class="board-list__content">{{ review.content }}</p>
                 </li>
               </ul>
-              <button v-if="filteredPosts.length > visibleCount" class="board-more-btn" @click="visibleCount += 5">더보기</button>
+              <button v-if="reviews.length > visibleCount" class="board-more-btn" @click="visibleCount += 5">더보기</button>
             </section>
           </div>
 
@@ -174,6 +255,18 @@
       :attraction-name="schedModal.name"
       @close="schedModal.visible = false"
     />
+
+    <!-- 삭제 확인 다이얼로그 -->
+    <BaseDialog
+      v-model="deleteDialog.visible"
+      title="리뷰 삭제"
+      message="이 리뷰를 삭제하시겠습니까? 삭제 후 복구할 수 없습니다."
+      confirm-text="삭제"
+      cancel-text="취소"
+      confirm-variant="danger"
+      @confirm="confirmDelete"
+      @cancel="deleteDialog.visible = false"
+    />
   </DefaultLayout>
 </template>
 
@@ -182,14 +275,14 @@ import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ScheduleSelectModal from '@/components/common/ScheduleSelectModal.vue'
-import { attractionApi, postApi } from '@/api/attractionApi'
+import { attractionApi } from '@/api/attractionApi'
+import { reviewApi } from '@/api/reviewApi'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
-import { CONTENT_TYPE_MAP } from '@/constants/enums'
-
-const FALLBACK_IMG = 'https://placehold.co/800x450/DCE8C7/6F8F4E?text=No+Image'
+import { CONTENT_TYPE_MAP, getDefaultImg, FALLBACK_IMG } from '@/constants/enums'
 
 const route = useRoute()
 const router = useRouter()
@@ -216,13 +309,41 @@ const isLoading = ref(true)
 const isAiLoading = ref(false)
 const mapRef = ref(null)
 
-const posts = ref([])
-const isPostLoading = ref(false)
+// ─── 리뷰 상태 ───────────────────────────────────────────────
+const reviews = ref([])
+const isReviewLoading = ref(false)
 const isPosting = ref(false)
 const visibleCount = ref(5)
-const postForm = ref({ content: '', rate: 0, isPrivate: false })
 
-const heroSrc = computed(() => attraction.value?.firstImageUrl || attraction.value?.thumbnailImageUrl || FALLBACK_IMG)
+// 필터
+const filterMineOnly = ref(false)
+const filterSort = ref('LATEST')
+
+// 작성 폼
+const postForm = ref({ content: '', rate: 0, isPrivate: false })
+const showWriteForm = ref(false)
+
+// 수정 상태
+const editingReview = ref(null)
+const editForm = ref({ content: '', rate: 0, isPrivate: false })
+
+// 삭제 다이얼로그
+const deleteDialog = reactive({ visible: false, target: null })
+
+// 내가 이미 작성한 리뷰
+const myReview = computed(() =>
+  reviews.value.find(r => r.userId === authStore.user?.userId)
+)
+
+const visibleReviews = computed(() => reviews.value.slice(0, visibleCount.value))
+
+function isMyReview(review) {
+  return authStore.isAuthenticated && review.userId === authStore.user?.userId
+}
+
+// ─── Attraction ───────────────────────────────────────────────
+const fallbackImg = computed(() => getDefaultImg(attraction.value?.contentTypeId))
+const heroSrc = computed(() => attraction.value?.firstImageUrl || attraction.value?.thumbnailImageUrl || fallbackImg.value)
 
 const groupedAccessibility = computed(() => {
   const arr = attraction.value?.accessibility || []
@@ -242,12 +363,7 @@ const groupedAccessibility = computed(() => {
   return Object.values(map)
 })
 
-const filteredPosts = computed(() =>
-  posts.value.filter(p => !p.isPrivate || p.authorId === authStore.user?.userId || authStore.isAdmin)
-)
-const visiblePosts = computed(() => filteredPosts.value.slice(0, visibleCount.value))
-
-// 카카오맵
+// ─── 카카오맵 ─────────────────────────────────────────────────
 async function loadKakaoMapScript() {
   return new Promise(resolve => {
     if (window.kakao?.maps) { window.kakao.maps.load(resolve); return }
@@ -266,11 +382,7 @@ function initKakaoMap() {
   if (!mapRef.value) { console.warn('[kakao] mapRef 없음'); return }
   const lat = Number(attraction.value.latitude)
   const lng = Number(attraction.value.longitude)
-  console.log('[kakao] 좌표:', lat, lng)
-  if (!lat || !lng) {
-    console.warn('[kakao] 유효한 좌표 없음 →', { latitude: attraction.value.latitude, longitude: attraction.value.longitude })
-    return
-  }
+  if (!lat || !lng) { console.warn('[kakao] 유효한 좌표 없음'); return }
   const coords = new window.kakao.maps.LatLng(lat, lng)
   const map = new window.kakao.maps.Map(mapRef.value, { center: coords, level: 4 })
   new window.kakao.maps.Marker({ map, position: coords, title: attraction.value.name })
@@ -284,30 +396,34 @@ onMounted(async () => {
   try {
     const { data: res } = await attractionApi.getDetail(id)
     attraction.value = res.data
-    console.log('[detail] latitude:', res.data?.latitude, 'longitude:', res.data?.longitude)
-    await loadPosts()
+    await loadReviews()
     await loadKakaoMapScript()
   } catch (err) {
     console.error('[detail] 오류:', err)
     if (err?.response?.data?.errorCode === 'ATTRACTION_NOT_FOUND') attraction.value = null
     else showToast('관광지 정보를 불러오지 못했습니다.', 'error')
   } finally {
-    // isLoading을 먼저 false로 → 지도 div가 DOM에 렌더링됨
     isLoading.value = false
   }
-
-  // isLoading=false 후 DOM이 완전히 그려진 다음 지도 초기화
   await nextTick()
   initKakaoMap()
 })
 
-async function loadPosts() {
+// ─── 리뷰 CRUD ───────────────────────────────────────────────
+async function loadReviews() {
   if (!attraction.value) return
-  isPostLoading.value = true
+  isReviewLoading.value = true
+  visibleCount.value = 5
   try {
-    const { data: res } = await postApi.getList({ attractionId: attraction.value.attractionId, page: 0, size: 50 })
-    posts.value = res.data?.content || []
-  } catch { posts.value = [] } finally { isPostLoading.value = false }
+    const params = { sort: filterSort.value }
+    if (filterMineOnly.value) params.mineOnly = true
+    const { data: res } = await reviewApi.getList(attraction.value.attractionId, params)
+    reviews.value = res.data || []
+  } catch {
+    reviews.value = []
+  } finally {
+    isReviewLoading.value = false
+  }
 }
 
 async function submitPost() {
@@ -315,19 +431,78 @@ async function submitPost() {
   if (!postForm.value.rate) { showToast('별점을 선택해주세요.', 'error'); return }
   isPosting.value = true
   try {
-    await postApi.create({
-      attractionId: attraction.value.attractionId,
+    await reviewApi.create(attraction.value.attractionId, {
       content: postForm.value.content,
       rate: postForm.value.rate,
-      postType: 'TRAVEL_REVIEW',
-      isPrivate: postForm.value.isPrivate ? 1 : 0,
+      isPrivate: postForm.value.isPrivate,
     })
     postForm.value = { content: '', rate: 0, isPrivate: false }
-    showToast('후기가 등록되었습니다.', 'success')
-    await loadPosts()
-  } catch { showToast('등록에 실패했습니다.', 'error') } finally { isPosting.value = false }
+    showWriteForm.value = false
+    showToast('리뷰가 등록되었습니다.', 'success')
+    await loadReviews()
+  } catch (err) {
+    const code = err?.response?.data?.errorCode
+    if (code === 'REVIEW_ALREADY_EXISTS') showToast('이미 이 관광지에 리뷰를 작성했습니다.', 'error')
+    else showToast('등록에 실패했습니다.', 'error')
+  } finally {
+    isPosting.value = false
+  }
 }
 
+function startEdit(review) {
+  editingReview.value = review
+  editForm.value = {
+    content: review.content,
+    rate: review.rate,
+    isPrivate: review.isPrivate,
+  }
+}
+
+function cancelEdit() {
+  editingReview.value = null
+  editForm.value = { content: '', rate: 0, isPrivate: false }
+}
+
+async function submitEdit() {
+  if (!editForm.value.content.trim()) { showToast('내용을 입력해주세요.', 'error'); return }
+  if (!editForm.value.rate) { showToast('별점을 선택해주세요.', 'error'); return }
+  isPosting.value = true
+  try {
+    await reviewApi.update(editingReview.value.reviewId, {
+      content: editForm.value.content,
+      rate: editForm.value.rate,
+      isPrivate: editForm.value.isPrivate,
+    })
+    cancelEdit()
+    showToast('리뷰가 수정되었습니다.', 'success')
+    await loadReviews()
+  } catch {
+    showToast('수정에 실패했습니다.', 'error')
+  } finally {
+    isPosting.value = false
+  }
+}
+
+function deleteReview(review) {
+  deleteDialog.target = review
+  deleteDialog.visible = true
+}
+
+async function confirmDelete() {
+  if (!deleteDialog.target) return
+  try {
+    await reviewApi.remove(deleteDialog.target.reviewId)
+    showToast('리뷰가 삭제되었습니다.', 'success')
+    deleteDialog.visible = false
+    deleteDialog.target = null
+    await loadReviews()
+  } catch {
+    showToast('삭제에 실패했습니다.', 'error')
+    deleteDialog.visible = false
+  }
+}
+
+// ─── 기타 ─────────────────────────────────────────────────────
 const schedModal = reactive({ visible: false, attractionId: null, name: '' })
 
 function handleAddSchedule() {
@@ -345,6 +520,11 @@ async function handleAiExplain() {
   finally { isAiLoading.value = false }
 }
 function getContentTypeLabel(id) { return CONTENT_TYPE_MAP[id]?.label || '기타' }
+function handleImgError(e) {
+  if (e.target.dataset.fallback) return
+  e.target.dataset.fallback = '1'
+  e.target.src = fallbackImg.value
+}
 function extractUrl(html) { const m = html?.match(/href="([^"]+)"/); return m ? m[1] : html || '#' }
 function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) }
 </script>
@@ -415,7 +595,30 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 /* 게시판 */
 .detail-board { background: var(--color-surface-container-lowest); border: 1.5px solid var(--color-outline-variant); border-radius: var(--radius-DEFAULT); overflow: hidden; margin-bottom: 5rem; }
 .board-header { padding: 1rem 1rem 0; }
+.board-header__top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+
+/* 리뷰 카운트 */
+.review-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; padding: 0 0.375rem; border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--font-size-xs); font-weight: 700; margin-left: 0.25rem; }
+
+/* 필터 바 */
+.board-filters { display: flex; align-items: center; gap: 0.75rem; padding-bottom: 0.75rem; flex-wrap: wrap; }
+.filter-check { display: flex; align-items: center; gap: 0.25rem; cursor: pointer; }
+.filter-check input { accent-color: var(--color-primary); width: 15px; height: 15px; }
+.filter-check__label { display: flex; align-items: center; gap: 0.2rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); font-weight: 600; }
+.filter-sort { border: 1.5px solid var(--color-outline-variant); border-radius: var(--radius-sm); padding: 0.25rem 0.625rem; font-size: var(--font-size-sm); color: var(--color-on-surface); background: var(--color-background); cursor: pointer; outline: none; transition: border-color 0.15s; margin-left: auto; }
+.filter-sort:focus { border-color: var(--color-primary); }
+
+/* 작성 폼 */
 .board-write { padding: 1rem; border-bottom: 1.5px solid var(--color-outline-variant); }
+
+/* 이미 리뷰 작성한 경우 */
+.review-written-notice { display: flex; align-items: center; gap: 0.5rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); }
+.notice-edit-btn { margin-left: auto; font-size: var(--font-size-sm); color: var(--color-primary); font-weight: 600; background: none; border: none; cursor: pointer; padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); transition: background 0.15s; }
+.notice-edit-btn:hover { background: var(--color-primary-soft); }
+
+/* 수정 폼 레이블 */
+.edit-form-label { display: flex; align-items: center; gap: 0.375rem; font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); margin-bottom: 0.75rem; }
+.edit-cancel-btn { margin-left: auto; font-size: var(--font-size-xs); color: var(--color-on-surface-variant); background: none; border: none; cursor: pointer; padding: 0.2rem 0.5rem; }
 
 /* 별점 */
 .star-row { display: flex; align-items: center; gap: 0.375rem; margin-bottom: 0.75rem; }
@@ -426,8 +629,8 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 
 .board-write__textarea { width: 100%; box-sizing: border-box; padding: 0.75rem; border-radius: var(--radius-DEFAULT); border: 1.5px solid var(--color-outline-variant); background: var(--color-background); font-size: var(--font-size-sm); color: var(--color-on-surface); resize: none; font-family: inherit; outline: none; transition: border-color 0.18s; margin-bottom: 0.5rem; }
 .board-write__textarea:focus { border-color: var(--color-primary); }
-.board-write__footer { display: flex; justify-content: space-between; align-items: center; }
-.privacy-toggle { display: flex; align-items: center; gap: 0.25rem; cursor: pointer; }
+.board-write__footer { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; }
+.privacy-toggle { display: flex; align-items: center; gap: 0.25rem; cursor: pointer; margin-right: auto; }
 .privacy-toggle input { accent-color: var(--color-primary); }
 .privacy-toggle__label { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); }
 
@@ -446,6 +649,15 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 .board-list__private { display: flex; align-items: center; gap: 0.125rem; font-size: var(--font-size-xs); color: var(--color-outline); }
 .board-list__content { font-size: var(--font-size-sm); color: var(--color-on-surface); line-height: 1.6; white-space: pre-wrap; }
 .board-more-btn { width: 100%; padding: 0.75rem; background: none; border: none; border-top: 1px solid var(--color-outline-variant); font-size: var(--font-size-sm); color: var(--color-primary-deep); font-weight: 600; cursor: pointer; }
+
+/* 수정/삭제 버튼 */
+.board-list__actions { display: flex; gap: 0.25rem; margin-left: auto; }
+.action-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--radius-sm); background: none; border: none; cursor: pointer; transition: background 0.15s; }
+.action-btn .material-symbols-outlined { font-size: 1rem; }
+.action-btn--edit { color: var(--color-primary-deep); }
+.action-btn--edit:hover { background: var(--color-primary-soft); }
+.action-btn--delete { color: #D85739; }
+.action-btn--delete:hover { background: #FFE3DA; }
 
 /* AI FAB */
 .ai-fab { position: fixed; bottom: calc(var(--bottom-nav-height) + 1.25rem); right: 1.25rem; width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--color-accent); color: var(--color-on-accent); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 40; transition: all 0.18s; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
