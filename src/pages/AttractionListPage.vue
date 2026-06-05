@@ -83,10 +83,10 @@
           <div v-for="item in attractions" :key="item.attractionId" class="attraction-card">
             <div class="attraction-card__thumb">
               <img
-                :src="item.firstImageUrl || item.thumbnailImageUrl || FALLBACK_IMG"
+                :src="item.firstImageUrl || item.thumbnailImageUrl || getDefaultImg(item.contentTypeId)"
                 :alt="item.name"
                 class="attraction-card__img"
-                @error="onImgError"
+                @error="e => handleImgError(e, item.contentTypeId)"
               />
               <span class="attraction-card__type-badge">{{ getContentTypeLabel(item.contentTypeId) }}</span>
             </div>
@@ -122,10 +122,10 @@
               >
                 <div class="map-sidebar-card__thumb">
                   <img
-                    :src="item.firstImageUrl || item.thumbnailImageUrl || FALLBACK_IMG"
+                    :src="item.firstImageUrl || item.thumbnailImageUrl || getDefaultImg(item.contentTypeId)"
                     :alt="item.name"
                     class="map-sidebar-card__img"
-                    @error="onImgError"
+                    @error="e => handleImgError(e, item.contentTypeId)"
                   />
                   <span class="attraction-card__type-badge" style="z-index: 1;">
                     {{ getContentTypeLabel(item.contentTypeId) }}
@@ -204,9 +204,7 @@ import { useRegionStore } from '@/stores/regionStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useVoiceSearch } from '@/composables/useVoiceSearch'
 import { useToast } from '@/composables/useToast'
-import { CONTENT_TYPES, CONTENT_TYPE_MAP } from '@/constants/enums'
-
-const FALLBACK_IMG = 'https://placehold.co/400x300/DCE8C7/6F8F4E?text=No+Image'
+import { CONTENT_TYPES, CONTENT_TYPE_MAP, getDefaultImg, FALLBACK_IMG } from '@/constants/enums'
 
 const route = useRoute()
 const router = useRouter()
@@ -396,7 +394,13 @@ async function loadMore() {
 }
 
 function getContentTypeLabel(id) { return CONTENT_TYPE_MAP[id]?.label || '기타' }
-function onImgError(e) { e.target.src = FALLBACK_IMG }
+
+/** 이미지 로드 실패 시 fallback. dataset flag로 무한루프 방지 */
+function handleImgError(e, contentTypeId) {
+  if (e.target.dataset.fallback) return          // 이미 fallback 시도했으면 무시
+  e.target.dataset.fallback = '1'
+  e.target.src = getDefaultImg(contentTypeId)
+}
 function goToDetail(item) { router.push(`/attraction/${item.attractionId}`) }
 const schedModal = reactive({ visible: false, attractionId: null, name: '' })
 
