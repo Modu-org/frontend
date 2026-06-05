@@ -68,15 +68,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { attractionApi } from '@/api/attractionApi'
+import { useRegionStore } from '@/stores/regionStore'
 import { useVoiceSearch } from '@/composables/useVoiceSearch'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const regionStore = useRegionStore()
 const voiceSearch = useVoiceSearch()
 const { showToast } = useToast()
 
@@ -84,16 +86,47 @@ const searchQuery = ref('')
 
 const baseUrl = '/images/locations/'
 
-const CITY_CARDS = [
-  { code: '11', name: '서울',   desc: '수도권 핵심 관광',  image: baseUrl + 'seoul.jpg' },
-  { code: '30', name: '대전',   desc: '과학과 문화의 도시', image: baseUrl + 'daejeon.jpg' },
-  { code: '26', name: '부산',   desc: '바다와 미식의 도시', image: baseUrl + 'busan.jpg' },
-  { code: '27', name: '대구',   desc: '역사와 문화의 도시', image: baseUrl + 'daegu.jpg' },
-  { code: '50', name: '제주도', desc: '자연의 보물섬',      image: baseUrl + 'jeju.jpg' },
-  { code: '51', name: '강원도', desc: '산과 바다의 조화',   image: baseUrl + 'gangwon.jpeg' },
-  { code: '52', name: '전주',   desc: '전통과 맛의 고장',   image: baseUrl + 'jeonju.jpg', sigunguCode: '113' },
-  { code: '29', name: '광주',   desc: '예술과 맛의 도시',   image: baseUrl + 'gwangju.jpg' },
-]
+const CITY_CARDS = ref([
+  { name: '서울',   matchKey: '서울', desc: '수도권 핵심 관광',  image: baseUrl + 'seoul.jpg', code: '', sigunguCode: '' },
+  { name: '대전',   matchKey: '대전', desc: '과학과 문화의 도시', image: baseUrl + 'daejeon.jpg', code: '', sigunguCode: '' },
+  { name: '부산',   matchKey: '부산', desc: '바다와 미식의 도시', image: baseUrl + 'busan.jpg', code: '', sigunguCode: '' },
+  { name: '대구',   matchKey: '대구', desc: '역사와 문화의 도시', image: baseUrl + 'daegu.jpg', code: '', sigunguCode: '' },
+  { name: '제주도', matchKey: '제주', desc: '자연의 보물섬',      image: baseUrl + 'jeju.jpg', code: '', sigunguCode: '' },
+  { name: '강원도', matchKey: '강원', desc: '산과 바다의 조화',   image: baseUrl + 'gangwon.jpeg', code: '', sigunguCode: '' },
+  { name: '전주',   matchKey: '전주', desc: '전통과 맛의 고장',   image: baseUrl + 'jeonju.jpg', code: '', sigunguCode: '' },
+  { name: '광주',   matchKey: '광주', desc: '예술과 맛의 도시',   image: baseUrl + 'gwangju.jpg', code: '', sigunguCode: '' },
+])
+
+function updateCityCodes() {
+  if (!regionStore.isLoaded) return
+  
+  CITY_CARDS.value.forEach(city => {
+    // 1. 시/도 레벨 검색 (예: '서울' -> '서울특별시', '강원' -> '강원특별자치도')
+    const matchedRegion = regionStore.regions.find(r => r.regionName.includes(city.matchKey))
+    if (matchedRegion) {
+      city.code = String(matchedRegion.regionCode)
+      city.sigunguCode = ''
+      return
+    }
+    
+    // 2. 군/구 레벨 검색 (예: '전주' -> 전북특별자치도 전주시)
+    for (const r of regionStore.regions) {
+      const matchedDistrict = r.districts?.find(d => d.districtName.includes(city.matchKey))
+      if (matchedDistrict) {
+        city.code = String(r.regionCode)
+        city.sigunguCode = String(matchedDistrict.districtCode)
+        return
+      }
+    }
+  })
+}
+
+onMounted(async () => {
+  if (!regionStore.isLoaded) {
+    await regionStore.loadOnce()
+  }
+  updateCityCodes()
+})
 
 function handleSearch() {
   if (!searchQuery.value.trim()) return
@@ -126,6 +159,10 @@ async function handleVoiceSearch() {
 }
 
 function goToCitySearch(city) {
+  if (!city.code) {
+    showToast('지역 코드를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.', 'info')
+    return
+  }
   const query = { regionCode: String(city.code) }
   if (city.sigunguCode) query.sigunguCode = String(city.sigunguCode)
   router.push({ path: '/attractions', query })

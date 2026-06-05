@@ -36,15 +36,17 @@ export const CONTENT_TYPE_MAP = Object.fromEntries(
  * contentTypeId별 기본(fallback) 이미지 경로
  * /public/images/defaults/ 에 위치
  */
+
+const baseUrl = '/images/defaults'
 export const CONTENT_TYPE_DEFAULT_IMG = {
-  '12': '/images/defaults/tourist.png',
-  '14': '/images/defaults/culture.png',
-  '15': '/images/defaults/festival.png',
-  '25': '/images/defaults/course.png',
-  '28': '/images/defaults/sports.png',
-  '32': '/images/defaults/lodging.png',
-  '38': '/images/defaults/shopping.png',
-  '39': '/images/defaults/restaurant.png',
+  '12': `${baseUrl}/tourist.png`,
+  '14': `${baseUrl}/culture.png`,
+  '15': `${baseUrl}/festival.png`,
+  '25': `${baseUrl}/course.png`,
+  '28': `${baseUrl}/sports.png`,
+  '32': `${baseUrl}/lodging.png`,
+  '38': `${baseUrl}/shopping.png`,
+  '39': `${baseUrl}/restaurant.png`,
 }
 
 export const FALLBACK_IMG = '/images/defaults/tourist.png'
