@@ -1,15 +1,15 @@
 <template>
-  <header class="sticky top-0 z-50 h-[var(--header-height)]">
+  <header class="sticky top-0 left-0 w-full z-50 h-[var(--header-height)]">
     <!-- Web Nav -->
-    <nav class="hidden md:flex bg-white w-full justify-between items-center px-6 py-4 shadow-sm shadow-[var(--color-on-surface)]/5 h-full">
-      <img src="/images/logo.png" alt="다온길 로고(홈으로 이동)" class="logo w-38 cursor-pointer" style="width:152px;height:auto;" @click="$router.push('/')" />
-      <div class="flex gap-6 items-center">
+    <nav class="hidden md:flex bg-white w-full justify-between items-center px-6 shadow-sm shadow-[var(--color-on-surface)]/5 h-full">
+      <img src="/images/logo.png" alt="이음 로고(홈으로 이동)" class="logo w-38 cursor-pointer" style="width:152px;height:auto;" @click="$router.push('/')" />
+      <div class="flex gap-12 items-center ml-40">
         <router-link
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
           :class="[
-            'text-sm font-semibold tracking-tight transition-colors duration-300 active:scale-95 px-3 py-1.5 rounded-full',
+            'text-sm font-semibold tracking-tight transition-colors duration-300 active:scale-95 px-3 py-1.5 rounded-[10px]',
             $route.path === item.to
               ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/8'
               : 'text-[var(--color-outline)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-container)]'
@@ -49,7 +49,7 @@
       <h1 v-if="title" class="text-lg font-extrabold tracking-tighter text-[var(--color-primary)]">
         {{ title }}
       </h1>
-      <img v-else src="/images/logo.png" alt="다온길 로고(홈으로 이동)" class="h-6 cursor-pointer" @click="$router.push('/')" />
+      <img v-else src="/images/logo.png" alt="이음 로고(홈으로 이동)" class="h-7 cursor-pointer" @click="$router.push('/')" />
       <!-- Mobile: 프로필 or 알림 -->
       <router-link v-if="authStore.isAuthenticated" to="/profile" class="profile-circle profile-circle--sm" aria-label="마이페이지">
         <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
@@ -98,7 +98,7 @@ async function handleLogout() {
 }
 
 .profile-circle {
-  width: 40px; height: 40px; border-radius: 50%;
+  width: 48px; height: 48px; border-radius: 50%;
   background: var(--gradient-primary);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: box-shadow 0.2s;
@@ -109,15 +109,15 @@ async function handleLogout() {
 .profile-circle--sm { width: 34px; height: 34px; }
 
 .profile-circle__img { width: 100%; height: 100%; object-fit: cover; }
-.profile-circle__icon { font-size: 22px; color: var(--color-on-primary); }
-.profile-circle--sm .profile-circle__icon { font-size: 18px; }
+.profile-circle__icon { font-size: 28px; color: var(--color-on-primary); }
+.profile-circle--sm .profile-circle__icon { font-size: 22px; }
 
 .logout-btn {
-  width: 36px; height: 36px; border-radius: 50%; border: none;
+  width: 48px; height: 48px; border-radius: 50%; border: none;
   background: var(--color-surface-container); color: var(--color-outline);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: all 0.2s; flex-shrink: 0;
 }
-.logout-btn:hover { background: var(--color-error-container); color: var(--color-error); }
-.logout-btn .material-symbols-outlined { font-size: 20px; }
+.logout-btn:hover { background: var(--color-error-container); }
+.logout-btn .material-symbols-outlined { font-size: 28px; }
 </style>

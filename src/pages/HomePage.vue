@@ -1,27 +1,59 @@
 <template>
   <DefaultLayout>
-    <!-- Hero Banner: 전체 너비 슬롯 -->
+    <!-- Hero Banner: 전체 너비 슬롯 (항상 2.2:1 비율 유지) -->
     <template #full-bleed>
       <section class="hero">
         <div class="hero__bg">
           <img
-            src="https://images.unsplash.com/photo-1548115184-bc6544d06a58?w=1600&q=80"
+            src="/images/banner.png"
             alt="대한민국 여행"
             class="hero__img"
           />
-          <div class="hero__overlay" />
         </div>
-        <div class="hero__content">
+        <!-- 좌측 상단 배너 타이틀/부제 텍스트 -->
+        <div class="hero__text">
           <h1 class="hero__title">여행의 즐거움,<br/>모두가 누릴 수 있도록</h1>
-          <p class="hero__subtitle">모두가 즐길 수 있는 여행을 다온길과 함께 계획해보세요.</p>
+          <p class="hero__subtitle">모두의 여행을 잇다, 이음</p>
 
-          <!-- Search Bar -->
+          <!-- 주요 기능 소개 (데스크탑 전용) -->
+          <div class="hero__features">
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <span class="material-symbols-outlined">accessible</span>
+              </div>
+              <span class="feature-label">접근성 조회</span>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <span class="material-symbols-outlined">mic</span>
+              </div>
+              <span class="feature-label">음성입력 지원</span>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <span class="material-symbols-outlined">photo_camera</span>
+              </div>
+              <span class="feature-label">맞춤 관광지 추천</span>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <span class="material-symbols-outlined">map</span>
+              </div>
+              <span class="feature-label">간편한 여행 계획</span>
+            </div>
+          </div>
+        </div>
+        <!-- 검색 영역: 배너 영역 내부 하단 배치 -->
+        <div class="hero__content">
+          <p v-if="voiceSearch.isListening.value" class="hero__voice-hint">
+            듣고 있어요... "서울에서 휠체어 가능한 공원 찾아줘"와 같이 말씀해주세요.
+          </p>
           <div class="search-bar">
             <span class="material-symbols-outlined search-bar__icon">search</span>
             <input
               v-model="searchQuery"
               class="search-bar__input"
-              placeholder="관광지명을 입력하세요"
+              placeholder="검색어를 입력해주세요."
               @keyup.enter="handleSearch"
             />
             <button
@@ -35,9 +67,7 @@
             <BaseButton size="sm" @click="handleSearch">검색</BaseButton>
           </div>
 
-          <p v-if="voiceSearch.isListening.value" class="hero__voice-hint">
-            🎙️ 듣고 있어요... "서울에서 휠체어 가능한 공원 찾아줘"
-          </p>
+      
         </div>
       </section>
     </template>
@@ -170,43 +200,141 @@ function goToCitySearch(city) {
 </script>
 
 <style scoped>
-/* Hero */
+/* Hero (배너 영역 2.2:1 비율 & 하단 20px 라운딩) */
 .hero {
-  position: relative; border-radius: var(--radius-lg); overflow: hidden;
-  margin: -1rem -1rem 2rem; min-height: 340px;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  aspect-ratio: 2.5 / 1;
 }
-.hero__bg { position: absolute; inset: 0; }
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 .hero__img { width: 100%; height: 100%; object-fit: cover; }
-.hero__overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.65)); }
-.hero__content {
-  position: relative; z-index: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; text-align: center;
-  padding: 3rem 1.5rem; min-height: 340px;
+
+/* 좌측 상단 텍스트 영역 */
+.hero__text {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  text-align: left;
+  z-index: 5;
 }
 .hero__title {
-  font-size: var(--font-size-3xl); font-weight: 700; color: #fff;
-  line-height: 1.2; margin-bottom: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-on-surface);
+  line-height: 1.35;
+  margin: 0;
 }
-.hero__subtitle { font-size: var(--font-size-body); color: rgba(255,255,255,.8); margin-bottom: 1.5rem; }
-.hero__voice-hint { color: rgba(255,255,255,.85); font-size: var(--font-size-sm); margin-top: 0.75rem; animation: pulse 1.5s infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+.hero__subtitle {
+  font-size: 0.7rem;
+  color: var(--color-primary-deep);
+  font-weight: 700;
+  margin-top: 0.3rem;
+  margin-bottom: 0;
+}
+
+/* 주요 기능 소개 (모바일은 공간 확보를 위해 기본 숨김) */
+.hero__features {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .hero__text {
+    top: 4rem;
+    left: 5.5rem;
+  }
+  .hero__title {
+    font-size: 2.85rem;
+  }
+  .hero__subtitle {
+    font-size: 1.25rem;
+    margin-top: 0.75rem;
+  }
+  .hero__features {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.75rem;
+  }
+  .feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+  .feature-icon-wrap {
+    width: 64px;
+    height: 64px;
+    background-color: #FAF6EE;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background-color 0.2s;
+  }
+  .feature-icon-wrap .material-symbols-outlined {
+    font-size: 28px;
+    color: var(--color-primary-deep);
+    transition: color 0.2s;
+  }
+  .feature-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-primary-deep);
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+  
+  /* 마우스 오버 시 마이크로 인터랙션 */
+  .feature-item:hover .feature-icon-wrap {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 14px rgba(111, 143, 78, 0.12);
+    background-color: var(--color-primary-container);
+  }
+  .feature-item:hover .feature-label {
+    color: var(--color-primary-hover);
+  }
+
+  /* Search Bar */
+  .search-bar {
+  padding: 0.375rem 0.375rem 0.375rem 1rem;
+  }
+  .search-bar__mic .material-symbols-outlined {
+    font-size: 32px;
+  }
+}
 
 /* Search Bar */
 .search-bar {
   display: flex; align-items: center; gap: 0.375rem;
   width: 100%; max-width: 540px; background: #fff;
-  border-radius: var(--radius-full); padding: 0.375rem 0.375rem 0.375rem 1rem;
+  border-radius: var(--radius-DEFAULT); 
+  border: 2px solid var(--color-primary-200);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-bar:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
 }
 .search-bar__icon { color: var(--color-primary); font-size: 1.5rem; flex-shrink: 0; }
 .search-bar__input {
   flex: 1; border: none; outline: none; background: transparent;
-  font-size: var(--font-size-body); color: var(--color-on-surface);
+  color: var(--color-on-surface);
   min-width: 0;
 }
 .search-bar__input::placeholder { color: var(--color-outline); }
 
 .search-bar__mic {
-  width: 40px; height: 40px; border-radius: 50%; border: none;
+  width: 2.45rem; height: 2.45rem; border-radius: var(--radius-full); border: none;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0; transition: all 0.18s;
   background: var(--color-primary-soft); color: var(--color-primary-deep);
@@ -216,19 +344,106 @@ function goToCitySearch(city) {
   background: var(--color-error); color: #fff;
   animation: pulse-mic 1.2s infinite;
 }
+
+/* 배너 내부 하단 정렬 콘텐츠 영역 */
+.hero__content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1.5rem 1.5rem;
+}
+
+/* 모바일 모드 대응 (헤더 가림 및 패딩 처리) */
+@media (max-width: 768px) {
+  .hero {
+    padding-top: calc(var(--header-height));
+    aspect-ratio: auto;
+  }
+  .hero__bg {
+    position: relative;
+    aspect-ratio: 2.2 / 1;
+    width: 100%;
+    height: auto;
+  }
+  .hero__text {
+    top: 1.1rem;
+    left: 1.2rem;
+  }
+  .hero__content {
+    position: absolute;
+    bottom: 0;
+    padding: 0 1rem 0.75rem;
+  }
+
+  /* 모바일 검색창 크기 대폭 축소 */
+  .search-bar {
+    max-width: 90%;
+    padding: 0.25rem 0.25rem 0.25rem 0.35rem;
+  }
+  .search-bar__icon {
+    font-size: 1.2rem;
+  }
+  .search-bar__input {
+    font-size: 0.8rem;
+  }
+  .search-bar__mic {
+    width: 32px;
+    height: 32px;
+  }
+  .search-bar__mic .material-symbols-outlined {
+    font-size: 1.15rem;
+  }
+  .search-bar :deep(button) {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+    min-height: 32px;
+    height: 32px;
+  }
+  .hero__voice-hint {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .section-title {
+  font-size: var(--font-size-xl);
+  }
+}
+
+
+.hero__voice-hint {
+  color: #fff;
+  font-size: var(--font-size-sm);
+  margin-top: 0.75rem;
+  animation: pulse 1.5s infinite;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
 @keyframes pulse-mic {
   0%,100% { box-shadow: 0 0 0 0 rgba(254,137,106,.4); }
   50% { box-shadow: 0 0 0 10px rgba(254,137,106,0); }
 }
 
 /* Cities */
-.cities-section { margin-bottom: 2rem; }
-.section-title {
-  display: flex; align-items: center; gap: 0.5rem;
-  font-size: var(--font-size-2xl); font-weight: 700;
-  color: var(--color-on-surface); margin-bottom: 1.25rem;
+.cities-section {
+  margin-top: 2rem;
 }
-.section-title__icon { color: var(--color-primary); font-size: 1.5em; }
+.section-title {
+  display: flex; 
+  align-items: center; 
+  gap: 0.5rem;
+  font-weight: 700;
+  color: var(--color-on-surface); 
+  margin-bottom: 1.25rem;
+}
+.section-title__icon { 
+  color: var(--color-primary);
+  font-size: 1.5em;
+}
 
 .city-grid {
   display: grid;

@@ -3,9 +3,9 @@
  * 온보딩에서 체크, 각 TINYINT 0/1
  */
 export const USER_DETAIL_FIELDS = [
-  { key: 'physical', label: '지체 장애', icon: 'accessible_forward' },
-  { key: 'visual', label: '시각 장애', icon: 'visibility' },
-  { key: 'hearing', label: '청각 장애', icon: 'hearing' },
+  { key: 'physical', label: '거동 불편/노약자', icon: 'accessible_forward' },
+  { key: 'visual', label: '시각 지원 필요', icon: 'visibility' },
+  { key: 'hearing', label: '청각 지원 필요', icon: 'hearing' },
   { key: 'infantFamily', label: '유아 동반', icon: 'stroller' },
 ]
 

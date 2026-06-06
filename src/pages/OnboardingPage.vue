@@ -2,8 +2,8 @@
   <div class="onboarding">
     <div class="onboarding__content">
       <div class="onboarding__headline">
-        <h1 class="onboarding__title">편한 여행을 위해<br/>알려주세요</h1>
-        <p class="onboarding__desc">해당하는 항목을 모두 선택해주세요. (복수 선택 가능)</p>
+        <h1 class="onboarding__title">맞춤형 여행 추천을 위해<br/>해당하는 항목을 선택해주세요.</h1>
+        <p class="onboarding__desc">(복수 선택 가능)</p>
       </div>
 
       <div class="onboarding__body">
@@ -167,7 +167,7 @@ function handleSkip() {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 24px 12px; min-height: 120px;
   border-radius: var(--radius-DEFAULT);
-  background: var(--color-surface-container-low);
+  background: var(--color-primary-200);
   color: var(--color-on-surface-variant);
   border: 2px solid transparent;
   cursor: pointer; transition: all 0.2s;

@@ -1,6 +1,6 @@
 <template>
   <nav
-    class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-3 bg-white/90 backdrop-blur-xl rounded-t-[32px] shadow-[0_-8px_24px_rgba(11,28,48,0.06)] z-50 h-[var(--bottom-nav-height)]"
+    class="md:hidden fixed bottom-0 w-full max-w-[768px] flex justify-around items-center bg-white/90 backdrop-blur-xl rounded-t-[32px] shadow-[0_-8px_24px_rgba(11,28,48,0.06)] z-50 h-[var(--bottom-nav-height)]"
     role="navigation"
     aria-label="하단 메뉴"
   >
