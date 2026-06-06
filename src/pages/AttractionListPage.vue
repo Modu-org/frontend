@@ -45,7 +45,7 @@
         <BaseChip
           v-for="ct in CONTENT_TYPES_FILTER"
           :key="ct.id"
-          :selected="filters.contentTypeId === ct.id"
+          :selected="filters.contentTypeIds.includes(ct.id)"
           @click="toggleContentType(ct)"
         >{{ ct.label }}</BaseChip>
       </div>
@@ -217,9 +217,9 @@ const CONTENT_TYPES_FILTER = CONTENT_TYPES.filter(c =>
   ['12', '14', '39', '15', '28', '25'].includes(c.id)
 )
 const USER_DETAIL_FIELDS = [
-  { key: 'physical',     apiKey: 'physical',     label: '지체장애·노약자', icon: 'accessible_forward' },
-  { key: 'visual',       apiKey: 'visual',        label: '시각장애',        icon: 'visibility' },
-  { key: 'hearing',      apiKey: 'hearing',       label: '청각장애',        icon: 'hearing' },
+  { key: 'physical',     apiKey: 'physical',     label: '거동 불편·노약자', icon: 'accessible_forward' },
+  { key: 'visual',       apiKey: 'visual',        label: '시각 지원 필요', icon: 'visibility' },
+  { key: 'hearing',      apiKey: 'hearing',       label: '청각 지원 필요', icon: 'hearing' },
   { key: 'infantFamily', apiKey: 'infant_family', label: '유모차 동반',     icon: 'stroller' },
 ]
 
@@ -235,7 +235,7 @@ const currentDistricts = computed(() => {
 const keyword = ref('')
 const isVoiceMode = ref(false)
 const filters = reactive({
-  regionCode: null, sigunguCode: null, contentTypeId: null,
+  regionCode: null, sigunguCode: null, contentTypeIds: [],
   physical: false, visual: false, hearing: false, infant_family: false,
 })
 const attractions = ref([])
@@ -258,6 +258,13 @@ function restoreFiltersFromQuery() {
     filters.sigunguCode = String(q.sigunguCode)
     selectedDistrictCode.value = String(q.sigunguCode)
   }
+  if (q.contentTypeIds) {
+    filters.contentTypeIds = Array.isArray(q.contentTypeIds)
+      ? q.contentTypeIds.map(String)
+      : [String(q.contentTypeIds)]
+  } else {
+    filters.contentTypeIds = []
+  }
   if (q.physical === 'true') filters.physical = true
   if (q.visual === 'true') filters.visual = true
   if (q.hearing === 'true') filters.hearing = true
@@ -270,7 +277,9 @@ function syncQueryToUrl() {
   if (keyword.value.trim()) q.keyword = keyword.value.trim()
   if (filters.regionCode) q.regionCode = filters.regionCode
   if (filters.sigunguCode) q.sigunguCode = filters.sigunguCode
-  if (filters.contentTypeId) q.contentTypeId = filters.contentTypeId
+  if (filters.contentTypeIds && filters.contentTypeIds.length) {
+    q.contentTypeIds = filters.contentTypeIds
+  }
   if (filters.physical) q.physical = 'true'
   if (filters.visual) q.visual = 'true'
   if (filters.hearing) q.hearing = 'true'
@@ -299,6 +308,11 @@ onMounted(async () => {
       if (pf.visual) filters.visual = true
       if (pf.hearing) filters.hearing = true
       if (pf.infant_family) filters.infant_family = true
+      if (pf.contentTypeId) {
+        filters.contentTypeIds = [String(pf.contentTypeId)]
+      } else if (pf.contentTypeIds) {
+        filters.contentTypeIds = Array.isArray(pf.contentTypeIds) ? pf.contentTypeIds.map(String) : [String(pf.contentTypeIds)]
+      }
     }
     return
   }
@@ -335,7 +349,12 @@ function onDistrictChange() {
 }
 function toggleContentType(ct) {
   clearVoiceModeOnFilter()
-  filters.contentTypeId = filters.contentTypeId === ct.id ? null : ct.id
+  const idx = filters.contentTypeIds.indexOf(ct.id)
+  if (idx > -1) {
+    filters.contentTypeIds.splice(idx, 1)
+  } else {
+    filters.contentTypeIds.push(ct.id)
+  }
   doSearch()
 }
 function toggleAccessibility(field) {
@@ -349,7 +368,9 @@ function buildParams(page = 0) {
   if (keyword.value.trim()) p.keyword = keyword.value.trim()
   if (filters.regionCode) p.regionCode = filters.regionCode
   if (filters.sigunguCode) p.sigunguCode = filters.sigunguCode
-  if (filters.contentTypeId) p.contentTypeId = filters.contentTypeId
+  if (filters.contentTypeIds && filters.contentTypeIds.length) {
+    p.contentTypeIds = filters.contentTypeIds
+  }
   if (filters.physical) p.physical = true
   if (filters.visual) p.visual = true
   if (filters.hearing) p.hearing = true
@@ -430,6 +451,11 @@ async function handleVoiceSearch() {
         if (parsed.visual) filters.visual = true
         if (parsed.hearing) filters.hearing = true
         if (parsed.infant_family) filters.infant_family = true
+        if (parsed.contentTypeId) {
+          filters.contentTypeIds = [String(parsed.contentTypeId)]
+        } else if (parsed.contentTypeIds) {
+          filters.contentTypeIds = Array.isArray(parsed.contentTypeIds) ? parsed.contentTypeIds.map(String) : [String(parsed.contentTypeIds)]
+        }
       }
       attractions.value = res.data?.content ?? res.data ?? []; hasMore.value = false
     } finally { isLoading.value = false }
