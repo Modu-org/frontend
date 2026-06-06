@@ -3,7 +3,7 @@
     <!-- Web Nav -->
     <nav class="hidden md:flex bg-white w-full justify-between items-center px-6 shadow-sm shadow-[var(--color-on-surface)]/5 h-full">
       <img src="/images/logo.png" alt="이음 로고(홈으로 이동)" class="logo w-38 cursor-pointer" style="width:152px;height:auto;" @click="$router.push('/')" />
-      <div class="flex gap-12 items-center ml-40">
+      <div class="flex gap-12 items-center" :class="{ 'ml-40': authStore.isAuthenticated }">
         <router-link
           v-for="item in navItems"
           :key="item.to"
