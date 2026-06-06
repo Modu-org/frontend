@@ -1,8 +1,8 @@
 <template>
   <AuthLayout>
     <div class="login-logo">
-      <img src="/images/logo.png" alt="다온길 로고" @click="$router.push('/')" />
-      <p class="login-subtitle">모두가 함께하는 배리어프리 여행 플래너</p>
+      <img src="/images/logo.png" alt="이음 로고" @click="$router.push('/')" />
+      <p class="login-subtitle">모두의 여행을 잇는 배리어프리 여행 플래너</p>
     </div>
 
     <BaseCard padding="lg" elevated>
@@ -186,16 +186,22 @@ function socialLogin(provider) {
 
 <style scoped>
 .login-logo { text-align: center; margin-bottom: 32px; }
-.login-logo img { width: 160px; cursor: pointer; margin: 0 auto; }
+.login-logo img { width: 250px; cursor: pointer; margin: 20px auto; }
 .login-subtitle { font-size: var(--font-size-lg); color: var(--color-on-surface-variant); margin-top: 8px; }
 
 .login-tabs {
   display: flex; margin-bottom: 24px;
+  height: 3.5rem;
   background: var(--color-surface-container-low);
-  border-radius: var(--radius-md); padding: 4px;
+  border-radius: var(--radius-DEFAULT); 
+  border: 2px solid var(--color-outline-variant);
+  overflow: hidden;
 }
 .login-tab {
-  flex: 1; padding: 10px; border-radius: 20px;
+  flex: 1; 
+  height: 100%;
+  padding: 10px; 
+  height: 100%;
   font-size: var(--font-size-base); font-weight: 700;
   border: none; cursor: pointer; background: none;
   color: var(--color-outline); transition: all 0.2s;
@@ -241,8 +247,9 @@ function socialLogin(provider) {
 .social-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; padding: 12px; border-radius: var(--radius-DEFAULT);
+  height: 3.5rem;
   font-size: var(--font-size-base); font-weight: 600;
-  border: 1px solid var(--color-outline-variant);
+  border: 2px solid var(--color-outline-variant);
   cursor: pointer; transition: all 0.2s;
 }
 .social-btn:hover { box-shadow: var(--shadow-md); }

@@ -3,85 +3,90 @@
 @import "tailwindcss";
 
 /* ============================================================
-   다온길 — Design System Tokens v2
+   이음 — Design System Tokens v2
    Rounded & Friendly, Barrier-Free Theme
    ============================================================ */
 
 @theme {
   /* --- Brand Core Colors --- */
-  --color-primary:            #AAC67B;
-  --color-primary-hover:      #8EAA61;
-  --color-primary-deep:       #6F8F4E;
-  --color-primary-soft:       #DCE8C7;
-  --color-primary-container:  #EDF4E0;
-  --color-on-primary:         #FFFFFF;
+  --color-primary: #AAC67B;
+  --color-primary-hover: #8EAA61;
+  --color-primary-deep: #6F8F4E;
+  --color-primary-soft: #DCE8C7;
+  --color-primary-container: #EDF4E0;
+  --color-on-primary: #FFFFFF;
 
   /* --- Primary Scale --- */
-  --color-primary-50:   #F6FAEF;
-  --color-primary-100:  #EDF4E0;
-  --color-primary-200:  #DCE8C7;
-  --color-primary-300:  #C8D9A6;
-  --color-primary-400:  #B8CE8B;
-  --color-primary-500:  #AAC67B;
-  --color-primary-600:  #8EAA61;
-  --color-primary-700:  #6F8F4E;
-  --color-primary-800:  #556D3B;
+  --color-primary-50: #F6FAEF;
+  --color-primary-100: #EDF4E0;
+  --color-primary-200: #DCE8C7;
+  --color-primary-300: #C8D9A6;
+  --color-primary-400: #B8CE8B;
+  --color-primary-500: #AAC67B;
+  --color-primary-600: #8EAA61;
+  --color-primary-700: #6F8F4E;
+  --color-primary-800: #556D3B;
 
   /* --- Accent (Warm Yellow) --- */
-  --color-accent:           #FEBC4C;
-  --color-accent-hover:     #F3A92A;
+  --color-accent: #FEBC4C;
+  --color-accent-hover: #F3A92A;
   --color-accent-container: #FFF8EA;
-  --color-on-accent:        #2B2B2B;
+  --color-on-accent: #2B2B2B;
 
   /* --- Accent Scale --- */
-  --color-accent-50:   #FFF8EA;
-  --color-accent-100:  #FFEFCB;
-  --color-accent-200:  #FFE1A0;
-  --color-accent-300:  #FFD071;
-  --color-accent-400:  #FEBC4C;
-  --color-accent-500:  #F3A92A;
-  --color-accent-600:  #D98D12;
+  --color-accent-50: #FFF8EA;
+  --color-accent-100: #FFEFCB;
+  --color-accent-200: #FFE1A0;
+  --color-accent-300: #FFD071;
+  --color-accent-400: #FEBC4C;
+  --color-accent-500: #F3A92A;
+  --color-accent-600: #D98D12;
 
   /* --- Danger (Stress Red-Orange) --- */
-  --color-error:            #FE896A;
-  --color-error-deep:       #D85739;
-  --color-error-container:  #FFF3EF;
-  --color-on-error:         #FFFFFF;
+  --color-error: #FE896A;
+  --color-error-deep: #D85739;
+  --color-error-container: #FFF3EF;
+  --color-on-error: #FFFFFF;
 
   /* --- Danger Scale --- */
-  --color-danger-50:   #FFF3EF;
-  --color-danger-100:  #FFE3DA;
-  --color-danger-200:  #FFC7B8;
-  --color-danger-300:  #FFAA93;
-  --color-danger-400:  #FE896A;
-  --color-danger-500:  #F26F50;
-  --color-danger-600:  #D85739;
+  --color-danger-50: #FFF3EF;
+  --color-danger-100: #FFE3DA;
+  --color-danger-200: #FFC7B8;
+  --color-danger-300: #FFAA93;
+  --color-danger-400: #FE896A;
+  --color-danger-500: #F26F50;
+  --color-danger-600: #D85739;
 
   /* --- Surface (Warm Ivory) --- */
-  --color-background:               #FFF8EE;
-  --color-surface:                  #FFF8EE;
+  --color-background: #FFF8EE;
+  --color-surface: #FFF8EE;
   --color-surface-container-lowest: #FFFFFF;
-  --color-surface-container-low:    #FBF6EE;
-  --color-surface-container:        #F5EFE4;
-  --color-surface-container-high:   #EDE8DE;
+  --color-surface-container-low: #FBF6EE;
+  --color-surface-container: #F5EFE4;
+  --color-surface-container-high: #EDE8DE;
 
   /* --- Text (Neutral) --- */
-  --color-on-surface:         #2B2B2B;
+  --color-on-surface: #2B2B2B;
   --color-on-surface-variant: #6B6B6B;
-  --color-outline:            #C7C7C7;
-  --color-outline-variant:    #E9E9E9;
+  --color-outline: #C7C7C7;
+  --color-outline-variant: #E9E9E9;
 
   /* --- Font --- */
   --font-sans: 'Pretendard Variable', Pretendard, 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-en: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
   /* --- Radius (Rounded & Friendly) --- */
-  --radius-sm:      0.75rem;   /* 12px */
-  --radius-DEFAULT: 1.25rem;   /* 20px */
-  --radius-md:      1.5rem;    /* 24px */
-  --radius-lg:      2rem;      /* 32px */
-  --radius-xl:      2.5rem;    /* 40px */
-  --radius-full:    9999px;
+  --radius-sm: 0.2rem;
+  /* 12px */
+  --radius-DEFAULT: 0.5rem;
+  /* 20px */
+  --radius-md: 0.8rem;
+  /* 24px */
+  --radius-lg: 1.1rem;
+  /* 32px */
+  --radius-xl: 1.4rem;
+  /* 40px */
+  --radius-full: 9999px;
 
   /* --- Shadows (minimal per accessibility guide) --- */
   --shadow-sm: 0 1px 4px rgba(43, 43, 43, .06);
@@ -98,26 +103,35 @@
   --font-scale: 1;
 
   /* rem 기반 (html font-size에 연동) */
-  --font-size-xs:   0.8125rem;   /* 13px */
-  --font-size-sm:   0.875rem;    /* 14px */
-  --font-size-base: 1rem;        /* 16px base (body용) */
-  --font-size-body: 1.25rem;     /* 20px (실제 본문) */
-  --font-size-lg:   1.125rem;    /* 18px */
-  --font-size-xl:   1.375rem;    /* 22px */
-  --font-size-2xl:  1.75rem;     /* 28px */
-  --font-size-3xl:  2rem;        /* 32px */
-  --font-size-4xl:  2.5rem;      /* 40px */
+  --font-size-xs: 0.8125rem;
+  /* 13px */
+  --font-size-sm: 0.875rem;
+  /* 14px */
+  --font-size-base: 1rem;
+  /* 16px base (body용) */
+  --font-size-body: 1.25rem;
+  /* 20px (실제 본문) */
+  --font-size-lg: 1.125rem;
+  /* 18px */
+  --font-size-xl: 1.375rem;
+  /* 22px */
+  --font-size-2xl: 1.75rem;
+  /* 28px */
+  --font-size-3xl: 2rem;
+  /* 32px */
+  --font-size-4xl: 2.5rem;
+  /* 40px */
 
   --touch-min: 48px;
-  --btn-height: 52px;
+  --btn-height: 48px;
 
-  --space-xs:  0.25rem;
-  --space-sm:  0.5rem;
-  --space-md:  1rem;
-  --space-lg:  1.5rem;
-  --space-xl:  2rem;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
 
-  --header-height: 64px;
+  --header-height: 70px;
   --bottom-nav-height: 80px;
   --content-max-width: 1280px;
 
@@ -126,7 +140,9 @@
 }
 
 @media (min-width: 768px) {
-  :root { --header-height: 80px; }
+  :root {
+    --header-height: 90px;
+  }
 }
 
 /* font-scale 적용: html의 font-size를 변경하면 rem 단위 전체가 비례 변경됨 */
@@ -185,9 +201,23 @@ html {
   }
 
   /* Typography Scale */
-  h1 { font-size: var(--font-size-4xl); font-weight: 700; line-height: 1.2; }
-  h2 { font-size: var(--font-size-3xl); font-weight: 700; line-height: 1.25; }
-  h3 { font-size: var(--font-size-2xl); font-weight: 600; line-height: 1.3; }
+  h1 {
+    font-size: var(--font-size-4xl);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  h3 {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    line-height: 1.3;
+  }
 
   :focus-visible {
     outline: 3px solid var(--color-primary);
@@ -227,16 +257,39 @@ html {
 }
 
 /* 면 중심 배경 유틸 */
-.bg-primary-soft { background: var(--color-primary-soft); }
-.bg-accent-soft  { background: var(--color-accent-container); }
-.bg-danger-soft  { background: var(--color-error-container); }
+.bg-primary-soft {
+  background: var(--color-primary-soft);
+}
+
+.bg-accent-soft {
+  background: var(--color-accent-container);
+}
+
+.bg-danger-soft {
+  background: var(--color-error-container);
+}
 
 /* 텍스트 */
-.text-primary { color: var(--color-primary-700); }
-.text-accent  { color: var(--color-accent-500); }
-.text-danger  { color: var(--color-error-deep); }
-.text-body    { color: var(--color-on-surface); }
-.text-caption { color: var(--color-on-surface-variant); font-size: var(--font-size-xs); }
+.text-primary {
+  color: var(--color-primary-700);
+}
+
+.text-accent {
+  color: var(--color-accent-500);
+}
+
+.text-danger {
+  color: var(--color-error-deep);
+}
+
+.text-body {
+  color: var(--color-on-surface);
+}
+
+.text-caption {
+  color: var(--color-on-surface-variant);
+  font-size: var(--font-size-xs);
+}
 
 /* Glass */
 .bg-glass {
@@ -251,8 +304,14 @@ html {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
   background-color: var(--color-outline-variant);
   border-radius: var(--radius-full);

@@ -45,12 +45,12 @@ defineProps({
   min-height: var(--touch-min);
 }
 .btn--md {
-  padding: 0.75rem 1.5rem;
+  padding: 0.635rem 1.5rem;
   font-size: var(--font-size-body);
   min-height: var(--btn-height);
 }
 .btn--lg {
-  padding: 0.875rem 2rem;
+  padding: 0.735rem 2rem;
   font-size: var(--font-size-xl);
   min-height: var(--btn-height);
 }

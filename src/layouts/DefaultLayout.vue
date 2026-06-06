@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen w-full bg-[var(--color-surface)] flex flex-col">
     <AppHeader :title="title" :show-back="showBack" />
-    <main class="w-full flex-1">
+    <main class="w-full flex-1 overflow-x-hidden">
       <!-- 전체 너비 슬롯 (배너, 히어로 이미지 등) -->
       <slot name="full-bleed" />
 
@@ -27,11 +27,11 @@
           <!-- 브랜드 로고 및 설명 -->
           <div class="footer-brand">
             <h2 class="footer-logo">
-              <span class="logo-highlight">DA-ON</span> GIL
+              <span class="logo-highlight">I :</span> EUM
             </h2>
-            <p class="brand-slogan">모두에게 열린 여행, 다온길</p>
+            <p class="brand-slogan">모두의 여행을 잇다, 이음</p>
             <p class="brand-desc">
-              장애인, 노약자, 영유아 동반 가족 등 관광약자 모두가 제약 없이 대한민국 전역을 마음껏 누비고 탐험할 수 있도록 맞춤형 무장애 여행 일정 및 접근성 정보를 제공합니다.
+              장애인, 노약자, 영유아 동반 가족 등 관광약자 모두가 제약 없이 대한민국 전역을 마음껏 여행할 수 있도록 맞춤형 무장애 여행 일정 및 접근성 정보를 제공합니다.
             </p>
           </div>
 
@@ -53,11 +53,11 @@
               <li><router-link to="#" class="accent-link">개인정보처리방침</router-link></li>
               <li class="support-info">
                 <span class="material-symbols-outlined icon">call</span>
-                <span>고객센터: 1544-1234 (평일 09:00 - 18:00)</span>
+                <span>고객센터: 1544-1234 <br/> <span class="call-time">(평일 09:00 - 18:00)</span></span>
               </li>
               <li class="support-info">
                 <span class="material-symbols-outlined icon">mail</span>
-                <span>이메일: support@modutrip.com</span>
+                <span>이메일: support@ieum.com</span>
               </li>
             </ul>
           </div>
@@ -67,10 +67,10 @@
 
         <div class="footer-bottom">
           <div class="business-info">
-            <p>공동대표: 오민석, 김한울 | 사업자등록번호: 120-00-00000 | 관광사업자등록: 제2026-00호</p>
-            <p>주소: 경상북도 구미시 진미동 123-45 다온빌딩 4층 오호이얏차차 주식회사</p>
+            <p>공동대표: 오민석, 김한울 | 사업자등록번호: 120-00-00000 <br class="mobile-only"/> | 관광사업자등록: 제2026-00호</p>
+            <p>주소: 경상북도 구미시 진미동 123-45 이음빌딩 4층 오호이얏차차 주식회사</p>
           </div>
-          <p class="copyright">© 2026 Modu Trip Co., Ltd. All rights reserved.</p>
+          <p class="copyright">© 2026 I:EUM Co., Ltd. All rights reserved.</p>
         </div>
       </div>
     </footer>
@@ -103,6 +103,10 @@ defineProps({
   .site-footer {
     padding-bottom: calc(var(--bottom-nav-height) + 2rem);
   }
+
+  .mobile-only {
+    display: block;
+  }
 }
 
 .footer-container {
@@ -123,6 +127,10 @@ defineProps({
   .footer-container {
     padding-left: 200px;
     padding-right: 200px;
+  }
+
+  .mobile-only {
+    display: none;
   }
 }
 
@@ -168,6 +176,7 @@ defineProps({
 
 .brand-desc {
   font-size: var(--font-size-xs);
+  word-break: keep-all;
   color: #94A3B8;
   line-height: 1.7;
 }
@@ -225,6 +234,7 @@ defineProps({
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  line-height: 1.2;
   font-size: var(--font-size-sm);
   color: #94A3B8;
 }
@@ -262,6 +272,10 @@ defineProps({
 
 .business-info p {
   margin: 0;
+}
+
+.call-time {
+  font-size: 16px;
 }
 
 .copyright {

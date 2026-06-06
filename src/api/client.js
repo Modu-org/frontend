@@ -19,6 +19,9 @@ const client = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  paramsSerializer: {
+    indexes: null,
+  },
 })
 
 /** Request 인터셉터 — 메모리의 accessToken을 Authorization 헤더에 첨부 */

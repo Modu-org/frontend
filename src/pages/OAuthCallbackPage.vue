@@ -19,7 +19,7 @@
       <div class="onboarding__content">
         <div class="onboarding__headline">
           <h1 class="onboarding__title">{{ authStore.nickname }}님, 환영합니다!</h1>
-          <p class="onboarding__desc">편한 여행을 위해 해당하는 항목을 선택해주세요. (복수 선택 가능)</p>
+          <p class="onboarding__desc">맞춤형 여행 추천을 위해 해당하는 항목을 선택해주세요. (복수 선택 가능)</p>
         </div>
         <div class="onboarding__body">
           <div class="option-grid">
@@ -165,7 +165,7 @@ function skipAndGo() {
   align-items: center; justify-content: center; gap: 0.5rem;
   padding: 1.5rem 0.75rem; border-radius: var(--radius-DEFAULT);
   border: 2px solid var(--color-outline-variant);
-  background: var(--color-surface-container-lowest);
+  background: var(--color-primary-200);
   cursor: pointer; transition: all 0.18s; min-height: 100px;
 }
 .option-card--selected {
