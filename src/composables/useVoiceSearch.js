@@ -142,7 +142,7 @@ export function useVoiceSearch() {
 
       startListening()
 
-      // 15초 타임아웃
+      // 30초 타임아웃
       setTimeout(() => {
         clearInterval(checkEnd)
         stopListening()
@@ -156,7 +156,7 @@ export function useVoiceSearch() {
         } else {
           reject(new Error('음성 인식 시간이 초과되었습니다.'))
         }
-      }, 15000)
+      }, 30000)
     })
   }
 

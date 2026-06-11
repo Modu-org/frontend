@@ -455,10 +455,21 @@ function goToCitySearch(city) {
 .city-card {
   position: relative; border-radius: var(--radius-DEFAULT); overflow: hidden;
   aspect-ratio: 4 / 3; cursor: pointer; border: none; padding: 0;
-  transition: transform 0.18s;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
-.city-card:active { transform: scale(0.97); }
-.city-card__img { width: 100%; height: 100%; object-fit: cover; }
+.city-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.12);
+}
+.city-card:active { transform: translateY(-2px) scale(0.98); }
+.city-card__img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.city-card:hover .city-card__img {
+  transform: scale(1.08);
+}
 .city-card__overlay {
   position: absolute; inset: 0;
   background: linear-gradient(to top, rgba(0,0,0,.6), transparent 60%);

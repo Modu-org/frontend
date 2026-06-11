@@ -50,7 +50,8 @@
         >{{ ct.label }}</BaseChip>
       </div>
 
-      <h3 class="filter-title">접근성 타입</h3>
+      <h3 class="filter-title">접근성 타입<span style="font-size: var(--font-size-sm); font-weight: 400; margin-left: 10px;">* 내 정보에 설정해두신 접근성 정보를 자동으로 반영합니다.</span></h3>
+      
       <div class="chip-row">
         <BaseChip
           v-for="field in USER_DETAIL_FIELDS"
@@ -88,10 +89,22 @@
                 class="attraction-card__img"
                 @error="e => handleImgError(e, item.contentTypeId)"
               />
-              <span class="attraction-card__type-badge">{{ getContentTypeLabel(item.contentTypeId) }}</span>
+              <div class="card-acc-icons">
+                <span
+                  v-for="acc in getAvailableAccessibilities(item.accessibility)"
+                  :key="acc.icon"
+                  class="card-acc-icon"
+                  :title="acc.label"
+                >
+                  <span class="material-symbols-outlined">{{ acc.icon }}</span>
+                </span>
+              </div>
             </div>
             <div class="attraction-card__body">
-              <h4 class="attraction-card__name">{{ item.name }}</h4>
+              <div class="attraction-card__title-row">
+                <h4 class="attraction-card__name">{{ item.name }}</h4>
+                <span class="attraction-card__badge">{{ getContentTypeLabel(item.contentTypeId) }}</span>
+              </div>
               <p class="attraction-card__addr">{{ item.address }}</p>
               <div class="attraction-card__actions">
                 <BaseButton size="sm" variant="secondary" @click="goToDetail(item)">
@@ -127,9 +140,16 @@
                     class="map-sidebar-card__img"
                     @error="e => handleImgError(e, item.contentTypeId)"
                   />
-                  <span class="attraction-card__type-badge" style="z-index: 1;">
-                    {{ getContentTypeLabel(item.contentTypeId) }}
-                  </span>
+                  <div class="card-acc-icons">
+                    <span
+                      v-for="acc in getAvailableAccessibilities(item.accessibility)"
+                      :key="acc.icon"
+                      class="card-acc-icon"
+                      :title="acc.label"
+                    >
+                      <span class="material-symbols-outlined">{{ acc.icon }}</span>
+                    </span>
+                  </div>
                 </div>
                 <div class="map-sidebar-card__body">
                   <div class="map-sidebar-card__title-row">
@@ -245,6 +265,7 @@ const isLoadingMore = ref(false)
 const currentPage = ref(0)
 const hasMore = ref(false)
 const PAGE_SIZE = 20
+const lastVoiceRaw = ref('')
 
 // ── URL 쿼리 → 필터 복원 ──────────────────────────────────
 function restoreFiltersFromQuery() {
@@ -296,23 +317,39 @@ onMounted(async () => {
   // 음성 검색 결과 주입
   const state = window.history.state
   if (state?.voiceResults?.length) {
-    keyword.value = route.query.voiceQuery || ''
+    lastVoiceRaw.value = route.query.voiceQuery || ''
     isVoiceMode.value = true
     attractions.value = state.voiceResults
     hasMore.value = false
     isInitialized.value = true
+    
+    // 음성 검색 응답 필터값 초기화 
+    filters.regionCode = null
+    filters.sigunguCode = null
+    filters.contentTypeIds = []
+    filters.physical = false
+    filters.visual = false
+    filters.hearing = false
+    filters.infant_family = false
+    selectedRegionCode.value = ''
+    selectedDistrictCode.value = ''
+
     const pf = state.voiceParsedFilters
     if (pf) {
       if (pf.regionCode) { filters.regionCode = String(pf.regionCode); selectedRegionCode.value = String(pf.regionCode) }
-      if (pf.physical) filters.physical = true
-      if (pf.visual) filters.visual = true
-      if (pf.hearing) filters.hearing = true
-      if (pf.infant_family) filters.infant_family = true
+      if (pf.sigunguCode) { filters.sigunguCode = String(pf.sigunguCode); selectedDistrictCode.value = String(pf.sigunguCode) }
+      filters.physical = !!pf.physical
+      filters.visual = !!pf.visual
+      filters.hearing = !!pf.hearing
+      filters.infant_family = !!(pf.infant_family || pf.infantFamily)
       if (pf.contentTypeId) {
         filters.contentTypeIds = [String(pf.contentTypeId)]
       } else if (pf.contentTypeIds) {
         filters.contentTypeIds = Array.isArray(pf.contentTypeIds) ? pf.contentTypeIds.map(String) : [String(pf.contentTypeIds)]
       }
+      keyword.value = pf.keyword || route.query.voiceQuery || ''
+    } else {
+      keyword.value = route.query.voiceQuery || ''
     }
     return
   }
@@ -332,7 +369,12 @@ watch(() => regionStore.isLoaded, (loaded) => {
 
 function clearVoiceMode() { isVoiceMode.value = false }
 function clearVoiceModeOnFilter() {
-  if (isVoiceMode.value) { isVoiceMode.value = false; keyword.value = '' }
+  if (isVoiceMode.value) {
+    isVoiceMode.value = false
+    if (keyword.value === lastVoiceRaw.value) {
+      keyword.value = ''
+    }
+  }
 }
 
 function onRegionChange() {
@@ -416,6 +458,32 @@ async function loadMore() {
 
 function getContentTypeLabel(id) { return CONTENT_TYPE_MAP[id]?.label || '기타' }
 
+function getAvailableAccessibilities(accessibilityList) {
+  if (!accessibilityList || !Array.isArray(accessibilityList)) return []
+  const availableCategories = new Set()
+  accessibilityList.forEach(acc => {
+    if (acc.status === 'AVAILABLE') {
+      availableCategories.add(acc.category)
+    }
+  })
+  
+  const mapped = []
+  const iconMap = {
+    PHYSICAL: { icon: 'accessible_forward', label: '지체장애/노약자' },
+    VISUAL: { icon: 'visibility', label: '시각장애' },
+    HEARING: { icon: 'hearing', label: '청각장애' },
+    INFANT_FAMILY: { icon: 'stroller', label: '유모차 동반' }
+  }
+  
+  const order = ['PHYSICAL', 'VISUAL', 'HEARING', 'INFANT_FAMILY']
+  order.forEach(cat => {
+    if (availableCategories.has(cat) && iconMap[cat]) {
+      mapped.push(iconMap[cat])
+    }
+  })
+  return mapped
+}
+
 /** 이미지 로드 실패 시 fallback. dataset flag로 무한루프 방지 */
 function handleImgError(e, contentTypeId) {
   if (e.target.dataset.fallback) return          // 이미 fallback 시도했으면 무시
@@ -443,19 +511,36 @@ async function handleVoiceSearch() {
     isLoading.value = true
     try {
       const { data: res } = await attractionApi.voiceSearch(raw, 1)
-      keyword.value = raw; isVoiceMode.value = true
+      lastVoiceRaw.value = raw
+      isVoiceMode.value = true
+      
+      // 음성 입력 응답값에 포함되는 필터링 옵션 초기화
+      filters.regionCode = null
+      filters.sigunguCode = null
+      filters.contentTypeIds = []
+      filters.physical = false
+      filters.visual = false
+      filters.hearing = false
+      filters.infant_family = false
+      selectedRegionCode.value = ''
+      selectedDistrictCode.value = ''
+
       const parsed = res.data?.parsedFilters
       if (parsed) {
         if (parsed.regionCode) { filters.regionCode = String(parsed.regionCode); selectedRegionCode.value = String(parsed.regionCode) }
-        if (parsed.physical) filters.physical = true
-        if (parsed.visual) filters.visual = true
-        if (parsed.hearing) filters.hearing = true
-        if (parsed.infant_family) filters.infant_family = true
+        if (parsed.sigunguCode) { filters.sigunguCode = String(parsed.sigunguCode); selectedDistrictCode.value = String(parsed.sigunguCode) }
+        filters.physical = !!parsed.physical
+        filters.visual = !!parsed.visual
+        filters.hearing = !!parsed.hearing
+        filters.infant_family = !!(parsed.infant_family || parsed.infantFamily)
         if (parsed.contentTypeId) {
           filters.contentTypeIds = [String(parsed.contentTypeId)]
         } else if (parsed.contentTypeIds) {
           filters.contentTypeIds = Array.isArray(parsed.contentTypeIds) ? parsed.contentTypeIds.map(String) : [String(parsed.contentTypeIds)]
         }
+        keyword.value = parsed.keyword || raw
+      } else {
+        keyword.value = raw
       }
       attractions.value = res.data?.content ?? res.data ?? []; hasMore.value = false
     } finally { isLoading.value = false }
@@ -651,9 +736,29 @@ async function initMap() {
   display: flex; flex-direction: column; justify-content: center; gap: 0.3rem; overflow: hidden;
 }
 /* 뷰포트 기반 글자 크기 — 화면 너비에 맞게 자동 조절 */
+.attraction-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: nowrap;
+  width: 100%;
+}
 .attraction-card__name {
   font-size: clamp(0.75rem, 3vw, 0.9375rem); font-weight: 700; color: var(--color-on-surface);
   line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.attraction-card__badge {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-deep);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-primary-200);
+  flex-shrink: 0;
 }
 .attraction-card__addr {
   font-size: clamp(0.625rem, 2.5vw, 0.8125rem); color: var(--color-on-surface-variant);
@@ -681,6 +786,15 @@ async function initMap() {
   .attraction-card__actions { flex-wrap: wrap; margin-top: auto; }
   .attraction-card__actions :deep(button),
   .attraction-card__actions :deep(a) { flex: 0 0 auto; }
+
+  .attraction-grid .card-acc-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .attraction-grid .card-acc-icon .material-symbols-outlined {
+    font-size: 25px;
+  }
 }
 
 /* FAB */
@@ -713,8 +827,7 @@ async function initMap() {
   display: flex;
   flex-direction: column-reverse;
   gap: 1rem;
-  height: calc(100vh - 280px);
-  min-height: 500px;
+  height: auto;
 }
 
 @media (min-width: 768px) {
@@ -726,7 +839,8 @@ async function initMap() {
 }
 
 .map-view-sidebar {
-  flex: 1;
+  height: 700px;
+  flex: none;
   display: flex;
   flex-direction: column;
   background: var(--color-surface-container-lowest);
@@ -738,8 +852,8 @@ async function initMap() {
 
 @media (min-width: 768px) {
   .map-view-sidebar {
-    max-width: 320px;
-    flex: 0 0 320px;
+    flex: 0 0 400px;
+    height: auto;
   }
 }
 
@@ -796,8 +910,7 @@ async function initMap() {
 .map-sidebar-card__thumb {
   position: relative;
   width: 35%;
-  max-width: 100px;
-  min-height: 80px;
+  min-width: 120px;
   flex-shrink: 0;
   background: var(--color-surface-container-high);
 }
@@ -827,6 +940,8 @@ async function initMap() {
   overflow: hidden;
   text-overflow: ellipsis;
   margin: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .map-sidebar-card__info {
@@ -873,10 +988,23 @@ async function initMap() {
 }
 
 @media (max-width: 767px) {
+  .map-view-layout {
+    height: auto;
+  }
   .map-view-main {
-    height: 350px;
+    height: 260px;
     flex: none;
   }
+
+  .card-acc-icon {
+    width: 25px;
+    height: 25px;
+  }
+
+  .card-acc-icon .material-symbols-outlined {
+    font-size: 20px;
+    font-weight: bold;
+  } 
 }
 
 .map-container {
@@ -945,7 +1073,8 @@ async function initMap() {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .map-sidebar-card__badge {
@@ -956,6 +1085,33 @@ async function initMap() {
   padding: 0.1rem 0.3rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-primary-200);
+  flex-shrink: 0;
+}
+
+.card-acc-icons {
+  position: absolute;
+  bottom: 0.4rem;
+  right: 0.4rem;
+  display: flex;
+  gap: 0.25rem;
+  z-index: 1;
+}
+
+.card-acc-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-primary-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.card-acc-icon .material-symbols-outlined {
+  font-size: 14px;
+  font-weight: bold;
 }
 
 /* Map Pagination styling */

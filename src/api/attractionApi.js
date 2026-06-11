@@ -22,8 +22,12 @@ export const attractionApi = {
    * @param {string} text — 음성 인식 raw 텍스트
    * @param {number} type — 1: 관광지 검색 (기본값)
    */
-  voiceSearch(text, type = 1) {
-    return client.post('/voice-search', { text, type })
+  voiceSearch(text, type = 1, attractionId = null) {
+    const payload = { text, type }
+    if (attractionId) payload.attractionId = attractionId
+    return client.post('/voice-search', payload, {
+      timeout: 30000 // 타임아웃 30초로 연장
+    })
   },
 }
 

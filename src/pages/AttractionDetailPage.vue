@@ -243,9 +243,16 @@
       </div>
     </template>
 
-    <!-- AI FAB -->
-    <button v-if="attraction" :class="['ai-fab', { 'ai-fab--loading': isAiLoading }]" aria-label="AI 음성 안내" @click="handleAiExplain">
-      <span class="material-symbols-outlined" style="font-size:1.6rem;">{{ isAiLoading ? 'hourglass_top' : 'record_voice_over' }}</span>
+    <!-- 음성 FAB -->
+    <button
+      v-if="attraction && voiceSearch.isSupported.value"
+      :class="['voice-fab', { 'voice-fab--active': voiceSearch.isListening.value || isSpeaking }]"
+      :aria-label="voiceSearch.isListening.value ? '음성 인식 중지' : '음성 안내 및 일정 추가'"
+      @click="handleVoiceAction"
+    >
+      <span class="material-symbols-outlined" style="font-size:1.75rem;">
+        {{ voiceSearch.isListening.value ? 'mic_off' : (isSpeaking ? 'volume_off' : 'mic') }}
+      </span>
     </button>
 
     <!-- 일정 선택 모달 -->
@@ -271,7 +278,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -282,6 +289,7 @@ import { attractionApi } from '@/api/attractionApi'
 import { reviewApi } from '@/api/reviewApi'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
+import { useVoiceSearch } from '@/composables/useVoiceSearch'
 import { CONTENT_TYPE_MAP, getDefaultImg, FALLBACK_IMG } from '@/constants/enums'
 
 const route = useRoute()
@@ -512,12 +520,119 @@ function handleAddSchedule() {
   schedModal.visible = true
 }
 function goLogin() { router.push({ name: 'Login', query: { redirect: route.fullPath } }) }
-async function handleAiExplain() {
-  if (isAiLoading.value) return
-  isAiLoading.value = true
-  showToast('AI가 관광지 설명을 준비 중입니다...', 'info')
-  try { await new Promise(r => setTimeout(r, 1000)); showToast('AI 음성 안내 기능이 곧 제공됩니다.', 'info') }
-  finally { isAiLoading.value = false }
+const voiceSearch = useVoiceSearch()
+const isSpeaking = ref(false)
+let activeAudio = null
+
+function stopSpeaking() {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
+  if (activeAudio) {
+    activeAudio.pause()
+    activeAudio = null
+  }
+  isSpeaking.value = false
+}
+
+onBeforeUnmount(() => {
+  stopSpeaking()
+})
+
+function playAudioData(base64Data) {
+  try {
+    const binary = atob(base64Data)
+    const array = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i)
+    }
+    const blob = new Blob([array], { type: 'audio/mpeg' })
+    const url = URL.createObjectURL(blob)
+    
+    if (activeAudio) {
+      activeAudio.pause()
+    }
+    
+    activeAudio = new Audio(url)
+    activeAudio.onplay = () => { isSpeaking.value = true }
+    activeAudio.onended = () => {
+      isSpeaking.value = false
+      URL.revokeObjectURL(url)
+      activeAudio = null
+    }
+    activeAudio.onerror = () => {
+      isSpeaking.value = false
+      URL.revokeObjectURL(url)
+      activeAudio = null
+      showToast('오디오 재생 중 오류가 발생했습니다.', 'error')
+    }
+    activeAudio.play().catch((err) => {
+      console.error('Audio play failed', err)
+      isSpeaking.value = false
+    })
+  } catch (err) {
+    console.error('Audio decode failed', err)
+    showToast('오디오 데이터 처리에 실패했습니다.', 'error')
+  }
+}
+
+async function handleVoiceAction() {
+  if (voiceSearch.isListening.value) {
+    voiceSearch.stopListening()
+    return
+  }
+  
+  // 재생 중인 음성 안내 중단
+  if (isSpeaking.value || ('speechSynthesis' in window && window.speechSynthesis.speaking)) {
+    stopSpeaking()
+    showToast('음성 안내를 중단했습니다.', 'info')
+    return
+  }
+
+  try {
+    const { raw } = await voiceSearch.listenAndParse()
+    showToast(`🎙️ "${raw}"`, 'info')
+
+    // 1. "일정", "추가" 키워드 포함 시 일정 추가 창 띄우기 (예: "일정에 추가", "일정 추가")
+    if (raw.includes('일정') && raw.includes('추가')) {
+      handleAddSchedule()
+      return
+    }
+
+    // 2. 그 외의 경우 백엔드 API (type 2) 호출하여 TTS 재생
+    isAiLoading.value = true
+    try {
+      const { data: res } = await attractionApi.voiceSearch(raw, 2, attraction.value.attractionId)
+      const textToRead = res.data?.readText
+      const audioData = res.data?.audioData
+
+      if (audioData) {
+        // 백엔드에서 생성해준 오디오 데이터 재생
+        playAudioData(audioData)
+        showToast('음성 안내를 시작합니다.', 'success')
+      } else if (textToRead) {
+        // 오디오 데이터가 없는 경우 브라우저 내장 TTS로 대체
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel()
+          const utterance = new SpeechSynthesisUtterance(textToRead)
+          utterance.lang = 'ko-KR'
+          utterance.onstart = () => { isSpeaking.value = true }
+          utterance.onend = () => { isSpeaking.value = false }
+          utterance.onerror = () => { isSpeaking.value = false }
+          window.speechSynthesis.speak(utterance)
+          showToast('음성 안내를 시작합니다. (TTS 브라우저 대체)', 'success')
+        } else {
+          showToast('이 브라우저는 음성 합성을 지원하지 않습니다.', 'error')
+        }
+      } else {
+        showToast('안내 텍스트를 불러오지 못했습니다.', 'error')
+      }
+    } finally {
+      isAiLoading.value = false
+    }
+  } catch (err) {
+    showToast(err.message || '음성 인식에 실패했습니다.', 'error')
+  }
 }
 function getContentTypeLabel(id) { return CONTENT_TYPE_MAP[id]?.label || '기타' }
 function handleImgError(e) {
@@ -659,9 +774,20 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 .action-btn--delete { color: #D85739; }
 .action-btn--delete:hover { background: #FFE3DA; }
 
-/* AI FAB */
-.ai-fab { position: fixed; bottom: calc(var(--bottom-nav-height) + 1.25rem); right: 1.25rem; width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--color-accent); color: var(--color-on-accent); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 40; transition: all 0.18s; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
-.ai-fab:hover { transform: scale(1.07); }
-.ai-fab:active { transform: scale(0.95); }
-.ai-fab--loading { opacity: 0.7; cursor: wait; }
+/* Voice FAB */
+.voice-fab {
+  position: fixed; bottom: calc(var(--bottom-nav-height) + 1.25rem); right: 1.25rem;
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: var(--color-primary); color: var(--color-on-primary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 40; transition: all 0.18s;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.voice-fab:hover { transform: scale(1.05); }
+.voice-fab:active { transform: scale(0.95); }
+.voice-fab--active { background: var(--color-error); animation: pulse-fab 1.2s infinite; }
+@keyframes pulse-fab {
+  0%,100% { box-shadow: 0 0 0 0 rgba(254,137,106,.5); }
+  50% { box-shadow: 0 0 0 12px rgba(254,137,106,0); }
+}
 </style>
