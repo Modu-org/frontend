@@ -11,6 +11,8 @@ export const recommendationApi = {
 
   getVoiceRecommendations(voiceText) {
     if (useMock) return mockRecommendationApi.getVoiceRecommendations(voiceText)
-    return client.post('/recommendations/voice', { voiceText })
+    return client.post('/recommendations/voice', { voiceText }, {
+      timeout: 30000 // 타임아웃 30초로 연장
+    })
   },
 }
