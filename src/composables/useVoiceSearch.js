@@ -105,7 +105,7 @@ export function useVoiceSearch() {
     if (parsed.physical) params.physical = true
     if (parsed.visual) params.visual = true
     if (parsed.hearing) params.hearing = true
-    if (parsed.infant_family) params.infant_family = true
+    if (parsed.infant_family) params.infantFamily = true
 
     return params
   }

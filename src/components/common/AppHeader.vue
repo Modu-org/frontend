@@ -10,7 +10,7 @@
           :to="item.to"
           :class="[
             'text-sm font-semibold tracking-tight transition-colors duration-300 active:scale-95 px-3 py-1.5 rounded-[10px]',
-            $route.path === item.to
+            isRouteActive(item.to)
               ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/8'
               : 'text-[var(--color-outline)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-container)]'
           ]"
@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
 
@@ -72,6 +72,7 @@ defineProps({
   showBack: { type: Boolean, default: false },
 })
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showToast } = useToast()
@@ -81,6 +82,14 @@ const navItems = [
   { to: '/attractions', label: '관광지' },
   { to: '/schedules', label: '내 여행' },
 ]
+
+function isRouteActive(itemTo) {
+  const path = route.path
+  if (itemTo === '/') return path === '/'
+  if (itemTo === '/attractions') return path === '/attractions' || path.startsWith('/attraction/')
+  if (itemTo === '/schedules') return path === '/schedules' || path.startsWith('/schedule/') || path.startsWith('/mytravel')
+  return path === itemTo
+}
 
 async function handleLogout() {
   await authStore.logout()
