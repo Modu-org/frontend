@@ -77,7 +77,7 @@
           <!-- Drop zone (per design: dashed add area) -->
           <button
             class="w-full mt-4 py-6 border-2 border-dashed border-[var(--color-outline-variant)]/30 rounded-[var(--radius-DEFAULT)] text-[var(--color-primary)] flex items-center justify-center gap-2 font-bold hover:bg-[var(--color-surface-container-low)] transition-colors"
-            @click="$router.push('/recommend')"
+            @click="$router.push('/attractions')"
           >
             <span class="material-symbols-outlined">add</span>
             여행지 추가하기

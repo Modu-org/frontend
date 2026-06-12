@@ -28,7 +28,7 @@
 | 기능 | 설명 |
 |------|------|
 | 🔍 **관광지 검색** | 키워드·지역·카테고리 필터로 관광지 탐색, 목록/지도 뷰 전환 |
-| ♿ **접근성 필터** | 휠체어·유모차·엘리베이터·경사로 등 배리어프리 조건 필터링 |
+| ♿ **접근성 필터** | 휠체어·유모차·엘리베이터 등 배리어프리 조건 필터링 (최초 진입 시 회원 정보 기반 자동 연동 및 세션 캐싱) |
 | 🗺️ **지도 보기** | 카카오맵 기반 내 위치 주변 관광지 탐색 + 사이드바 상세정보 |
 | 📋 **여행 일정 관리** | 여행 계획 생성·수정·삭제, 관광지를 일정에 추가하여 루트 구성 |
 | 🏠 **홈 추천** | 맞춤 추천 / 부모님 동반 / 휠체어 친화 / 지역별 관광지 카드 |
@@ -69,7 +69,6 @@ src/
 │   ├── authApi.js        #   인증 API (login, signup, logout, refresh, checkId, 사용자 정보)
 │   ├── scheduleApi.js    #   일정·노드·엣지 API
 │   ├── tripApi.js        #   관광지 검색·필터 API
-│   ├── recommendationApi.js  # 추천 API
 │   ├── reviewApi.js        #   여행 후기 API
 │   └── mock/             #   Mock API (오프라인 개발용)
 ├── assets/styles/        # 글로벌 CSS (디자인 시스템 토큰)
@@ -93,7 +92,7 @@ src/
 ├── layouts/              # DefaultLayout, AuthLayout
 ├── pages/
 │   ├── HomePage.vue      #   메인 (검색 + 추천 섹션)
-│   ├── RecommendPage.vue #   관광지 탐색 (목록/지도 뷰)
+│   ├── AttractionListPage.vue # 관광지 탐색 (목록/지도 뷰)
 │   ├── AttractionDetailPage.vue  # 관광지 상세
 │   ├── MyPage.vue        #   내 여행 일정 관리
 │   ├── TripDetailPage.vue #  여행 상세 보기
@@ -101,13 +100,13 @@ src/
 │   ├── ProfilePage.vue   #   마이페이지 (정보 수정 + 설정)
 │   ├── BoardWritePage.vue #  게시글 작성
 │   ├── LoginPage.vue     #   로그인/회원가입 (1단계)
-│   └── OnboardingPage.vue #  접근성 정보 입력 (2단계) → 가입 완료
+│   ├── OnboardingPage.vue #  접근성 정보 입력 (2단계) → 가입 완료
+│   └── NotFoundPage.vue  #   404 에러 대응 페이지
 ├── router/               # Vue Router 설정 + 네비게이션 가드
 ├── stores/
 │   ├── authStore.js      #   인증·프로필 (인메모리 토큰)
 │   ├── scheduleStore.js  #   여행 일정 CRUD
 │   ├── tripStore.js      #   관광지 상태 관리
-│   ├── recommendationStore.js  # 추천 상태
 │   └── themeStore.js     #   심플 모드·글자 크기
 └── main.js               # 앱 엔트리 (세션 복원 → 마운트)
 ```
@@ -151,7 +150,7 @@ npm run dev
 ### 빌드
 
 ```bash
-# 프로덕션 빌드
+# 프로덕션 빌드 (빌드 완료 후 dist/index.html이 dist/404.html로 자동 복제됨)
 npm run build
 
 # 빌드 결과 미리보기
@@ -188,12 +187,13 @@ npm run preview
 | 페이지 | 비로그인 | 로그인 |
 |--------|:--------:|:------:|
 | 홈 (`/`) | ✅ | ✅ |
-| 관광지 탐색 (`/recommend`) | ✅ | ✅ |
+| 관광지 탐색 (`/attractions`) | ✅ | ✅ |
 | 관광지 상세 (`/attraction/:id`) | ✅ | ✅ |
 | 내 여행 (`/mypage`) | ❌ → 로그인 | ✅ |
 | 마이페이지 (`/profile`) | ❌ → 로그인 | ✅ |
 | 게시글 작성 (`/board/write`) | ❌ → 로그인 | ✅ |
 | 온보딩 (`/onboarding`) | ✅ (회원가입 2단계) | — |
+| 404 페이지 | ✅ (NotFoundPage로 안내) | ✅ (NotFoundPage로 안내) |
 
 ## 🤝 기여하기
 

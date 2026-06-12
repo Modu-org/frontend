@@ -25,7 +25,7 @@ const route = useRoute()
 
 const navItems = [
   { to: '/', label: '홈', icon: 'explore' },
-  { to: '/recommend', label: '관광지', icon: 'travel_explore' },
+  { to: '/attractions', label: '관광지', icon: 'travel_explore' },
   { to: '/schedules', label: '내 여행', icon: 'luggage' },
 ]
 
