@@ -288,13 +288,13 @@ function restoreFiltersFromQuery() {
   }
 
   // 1. URL에 명시적인 접근성 필터 파라미터가 포함되어 있는 경우 우선 적용 (예: 공유 링크 유입)
-  const hasAccQuery = ('physical' in q) || ('visual' in q) || ('hearing' in q) || ('infant_family' in q)
+  const hasAccQuery = ('physical' in q) || ('visual' in q) || ('hearing' in q) || ('infantFamily' in q)
 
   if (hasAccQuery) {
     filters.physical = q.physical === 'true'
     filters.visual = q.visual === 'true'
     filters.hearing = q.hearing === 'true'
-    filters.infant_family = q.infant_family === 'true'
+    filters.infant_family = q.infantFamily === 'true'
   } else {
     // 2. 세션 스토리지에 캐시된 필터가 있다면 복원 (새로고침 또는 상세에서 돌아온 경우)
     const savedFiltersJson = sessionStorage.getItem('attraction_filters')
@@ -342,7 +342,7 @@ function syncQueryToUrl() {
   if (filters.physical) q.physical = 'true'
   if (filters.visual) q.visual = 'true'
   if (filters.hearing) q.hearing = 'true'
-  if (filters.infant_family) q.infant_family = 'true'
+  if (filters.infant_family) q.infantFamily = 'true'
   router.replace({ query: q })
 }
 
