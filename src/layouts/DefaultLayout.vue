@@ -40,7 +40,7 @@
             <h3 class="footer-section-title">탐색</h3>
             <ul>
               <li><router-link to="/">홈으로</router-link></li>
-              <li><router-link to="/recommend">관광지 검색</router-link></li>
+              <li><router-link to="/attractions">관광지 검색</router-link></li>
               <li><router-link to="/schedules">내 여행 일정</router-link></li>
             </ul>
           </div>

@@ -78,7 +78,7 @@ const { showToast } = useToast()
 
 const navItems = [
   { to: '/', label: '홈' },
-  { to: '/recommend', label: '관광지' },
+  { to: '/attractions', label: '관광지' },
   { to: '/schedules', label: '내 여행' },
 ]
 

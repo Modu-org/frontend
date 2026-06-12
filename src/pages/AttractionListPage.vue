@@ -50,7 +50,7 @@
         >{{ ct.label }}</BaseChip>
       </div>
 
-      <h3 class="filter-title">접근성 타입<span style="font-size: var(--font-size-sm); font-weight: 400; margin-left: 10px;">* 내 정보에 설정해두신 접근성 정보를 자동으로 반영합니다.</span></h3>
+      <h3 class="filter-title">접근성 타입<span style="font-size: var(--font-size-sm); font-weight: 400; margin-left: 10px;">* 처음에는 내 정보에 설정해두신 접근성 정보를 자동으로 반영합니다.</span></h3>
       
       <div class="chip-row">
         <BaseChip
@@ -286,10 +286,48 @@ function restoreFiltersFromQuery() {
   } else {
     filters.contentTypeIds = []
   }
-  if (q.physical === 'true') filters.physical = true
-  if (q.visual === 'true') filters.visual = true
-  if (q.hearing === 'true') filters.hearing = true
-  if (q.infant_family === 'true') filters.infant_family = true
+
+  // 1. URL에 명시적인 접근성 필터 파라미터가 포함되어 있는 경우 우선 적용 (예: 공유 링크 유입)
+  const hasAccQuery = ('physical' in q) || ('visual' in q) || ('hearing' in q) || ('infant_family' in q)
+
+  if (hasAccQuery) {
+    filters.physical = q.physical === 'true'
+    filters.visual = q.visual === 'true'
+    filters.hearing = q.hearing === 'true'
+    filters.infant_family = q.infant_family === 'true'
+  } else {
+    // 2. 세션 스토리지에 캐시된 필터가 있다면 복원 (새로고침 또는 상세에서 돌아온 경우)
+    const savedFiltersJson = sessionStorage.getItem('attraction_filters')
+    if (savedFiltersJson) {
+      try {
+        const saved = JSON.parse(savedFiltersJson)
+        filters.physical = !!saved.physical
+        filters.visual = !!saved.visual
+        filters.hearing = !!saved.hearing
+        filters.infant_family = !!saved.infant_family
+      } catch (e) {
+        applyDefaultAccessibility()
+      }
+    } else {
+      // 3. 캐시가 없는 완전히 새로운 진입인 경우 -> 회원 기본 정보 로드
+      applyDefaultAccessibility()
+    }
+  }
+}
+
+// 회원 프로필 기반 접근성 정보 기본 활성화 함수
+function applyDefaultAccessibility() {
+  if (authStore.user) {
+    filters.physical = !!authStore.user.physical
+    filters.visual = !!authStore.user.visual
+    filters.hearing = !!authStore.user.hearing
+    filters.infant_family = !!authStore.user.infantFamily
+  } else {
+    filters.physical = false
+    filters.visual = false
+    filters.hearing = false
+    filters.infant_family = false
+  }
 }
 
 // ── 필터 → URL 동기화 ──────────────────────────────────────
@@ -366,6 +404,11 @@ watch(() => regionStore.isLoaded, (loaded) => {
     selectedRegionCode.value = tmp
   }
 })
+
+// 접근성 필터 실시간 변경 감지 및 세션 스토리지 백업
+watch(filters, (newFilters) => {
+  sessionStorage.setItem('attraction_filters', JSON.stringify(newFilters))
+}, { deep: true })
 
 function clearVoiceMode() { isVoiceMode.value = false }
 function clearVoiceModeOnFilter() {
