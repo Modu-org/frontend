@@ -459,7 +459,7 @@ function buildParams(page = 0) {
   if (filters.physical) p.physical = true
   if (filters.visual) p.visual = true
   if (filters.hearing) p.hearing = true
-  if (filters.infant_family) p.infant_family = true
+  if (filters.infant_family) p.infantFamily = true
   return p
 }
 

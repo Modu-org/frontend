@@ -30,7 +30,11 @@ const navItems = [
 ]
 
 function isActive(to) {
-  return route.path === to
+  const path = route.path
+  if (to === '/') return path === '/'
+  if (to === '/attractions') return path === '/attractions' || path.startsWith('/attraction/')
+  if (to === '/schedules') return path === '/schedules' || path.startsWith('/schedule/') || path.startsWith('/mytravel')
+  return path === to
 }
 
 function linkClasses(to) {
