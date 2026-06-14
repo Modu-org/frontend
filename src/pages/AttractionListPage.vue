@@ -213,7 +213,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseChip from '@/components/common/BaseChip.vue'
@@ -224,6 +224,7 @@ import { useRegionStore } from '@/stores/regionStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useVoiceSearch } from '@/composables/useVoiceSearch'
 import { useToast } from '@/composables/useToast'
+import { useAttractionFilterStore } from '@/stores/attractionFilterStore'
 import { CONTENT_TYPES, CONTENT_TYPE_MAP, getDefaultImg, FALLBACK_IMG } from '@/constants/enums'
 
 const route = useRoute()
@@ -232,6 +233,7 @@ const regionStore = useRegionStore()
 const authStore = useAuthStore()
 const voiceSearch = useVoiceSearch()
 const { showToast } = useToast()
+const attractionFilterStore = useAttractionFilterStore()
 
 const CONTENT_TYPES_FILTER = CONTENT_TYPES.filter(c =>
   ['12', '14', '39', '15', '28', '25'].includes(c.id)
@@ -295,23 +297,18 @@ function restoreFiltersFromQuery() {
     filters.visual = q.visual === 'true'
     filters.hearing = q.hearing === 'true'
     filters.infant_family = q.infantFamily === 'true'
+    attractionFilterStore.markDefaultsApplied()
+  } else if (attractionFilterStore.hasAppliedDefaults) {
+    // 2. 이미 기본값을 적용한 적이 있는 세션 → URL에 없는 필터는 사용자가 의도적으로 해제한 것
+    //    URL 쿼리 파라미터에 있는 상태(위에서 이미 반영)를 그대로 존중
+    filters.physical = false
+    filters.visual = false
+    filters.hearing = false
+    filters.infant_family = false
   } else {
-    // 2. 세션 스토리지에 캐시된 필터가 있다면 복원 (새로고침 또는 상세에서 돌아온 경우)
-    const savedFiltersJson = sessionStorage.getItem('attraction_filters')
-    if (savedFiltersJson) {
-      try {
-        const saved = JSON.parse(savedFiltersJson)
-        filters.physical = !!saved.physical
-        filters.visual = !!saved.visual
-        filters.hearing = !!saved.hearing
-        filters.infant_family = !!saved.infant_family
-      } catch (e) {
-        applyDefaultAccessibility()
-      }
-    } else {
-      // 3. 캐시가 없는 완전히 새로운 진입인 경우 -> 회원 기본 정보 로드
-      applyDefaultAccessibility()
-    }
+    // 3. 완전히 새로운 진입 → 회원 프로필 기반 기본 접근성 정보 활성화
+    applyDefaultAccessibility()
+    attractionFilterStore.markDefaultsApplied()
   }
 }
 
@@ -405,10 +402,14 @@ watch(() => regionStore.isLoaded, (loaded) => {
   }
 })
 
-// 접근성 필터 실시간 변경 감지 및 세션 스토리지 백업
-watch(filters, (newFilters) => {
-  sessionStorage.setItem('attraction_filters', JSON.stringify(newFilters))
-}, { deep: true })
+// 관광지 영역(목록 ↔ 상세)을 벗어날 때 필터 기본값 플래그 리셋
+// → 다음 진입 시 authStore 기반 기본 접근성 정보가 다시 적용됨
+onBeforeRouteLeave((to) => {
+  const staysInAttractionArea = to.path.startsWith('/attraction')
+  if (!staysInAttractionArea) {
+    attractionFilterStore.reset()
+  }
+})
 
 function clearVoiceMode() { isVoiceMode.value = false }
 function clearVoiceModeOnFilter() {

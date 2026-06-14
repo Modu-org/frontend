@@ -128,11 +128,4 @@ router.beforeEach(async (to) => {
 
 })
 
-router.afterEach((to) => {
-  // 관광지 목록(/attractions) 및 상세(/attraction/) 이외의 아예 다른 페이지로 이동하는 경우 세션 캐시 제거
-  if (!to.path.startsWith('/attractions') && !to.path.startsWith('/attraction/')) {
-    sessionStorage.removeItem('attraction_filters')
-  }
-})
-
 export default router

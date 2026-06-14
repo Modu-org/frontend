@@ -316,3 +316,10 @@ html {
   background-color: var(--color-outline-variant);
   border-radius: var(--radius-full);
 }
+
+/* 1920px 초과 시 음성 인식 플로팅 버튼(.voice-fab)이 콘텐츠 영역 내부(우측 끝에서 1.25rem 안쪽)에 위치하도록 조정 */
+@media (min-width: 1920px) {
+  .voice-fab {
+    right: calc(50% - 960px + 1.25rem) !important;
+  }
+}
