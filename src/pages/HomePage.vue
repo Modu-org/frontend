@@ -94,18 +94,81 @@
         </button>
       </div>
     </section>
+
+    <!-- 🔥 인기 관광지 TOP -->
+    <section class="popular-section">
+      <h2 class="section-title">
+        <span class="material-symbols-outlined section-title__icon" style="color: var(--color-error);">local_fire_department</span>
+        인기 관광지 TOP
+      </h2>
+
+      <!-- 지역 드롭다운 -->
+      <div class="popular-filter">
+        <BaseSelect
+          :modelValue="selectedRankingCity"
+          :options="rankingRegionOptions"
+          placeholder="지역 선택"
+          @update:modelValue="onRankingRegionChange"
+        />
+      </div>
+
+      <!-- 로딩 -->
+      <div v-if="isRankingLoading" class="popular-loading">
+        <LoadingSpinner />
+      </div>
+
+      <!-- 랭킹 리스트 -->
+      <div v-else-if="rankingList.length" class="popular-scroll">
+        <button
+          v-for="(item, idx) in rankingList"
+          :key="item.attractionId"
+          class="rank-card"
+          @click="goToAttractionDetail(item.attractionId)"
+        >
+          <div class="rank-card__thumb">
+            <img
+              :src="item.thumbnailImageUrl || FALLBACK_IMG"
+              :alt="item.name"
+              class="rank-card__img"
+              @error="e => e.target.src = FALLBACK_IMG"
+            />
+            <span class="rank-card__rank" :class="`rank-card__rank--${idx + 1}`">{{ idx + 1 }}</span>
+          </div>
+          <div class="rank-card__body">
+            <div class="rank-card__title-row">
+              <span class="rank-card__name">{{ item.name }}</span>
+              <span class="rank-card__badge">{{ getTypeLabel(item.contentTypeId) }}</span>
+            </div>
+            <span class="rank-card__addr">{{ item.address }}</span>
+            <span class="rank-card__count">
+              <span class="material-symbols-outlined" style="font-size: 0.875rem;">add_circle</span>
+              {{ item.addedCount }}명이 일정에 추가
+            </span>
+          </div>
+        </button>
+      </div>
+
+      <!-- 빈 상태 -->
+      <div v-else class="popular-empty">
+        <span class="material-symbols-outlined" style="font-size: 2rem; color: var(--color-outline);">sentiment_neutral</span>
+        <p>해당 지역의 인기 관광지 데이터가 없습니다.</p>
+      </div>
+    </section>
   </DefaultLayout>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import { attractionApi } from '@/api/attractionApi'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
+import { attractionApi, regionApi } from '@/api/attractionApi'
 import { useRegionStore } from '@/stores/regionStore'
 import { useVoiceSearch } from '@/composables/useVoiceSearch'
 import { useToast } from '@/composables/useToast'
+import { CONTENT_TYPE_MAP, FALLBACK_IMG } from '@/constants/enums'
 
 const router = useRouter()
 const regionStore = useRegionStore()
@@ -151,12 +214,8 @@ function updateCityCodes() {
   })
 }
 
-onMounted(async () => {
-  if (!regionStore.isLoaded) {
-    await regionStore.loadOnce()
-  }
-  updateCityCodes()
-})
+
+
 
 function handleSearch() {
   if (!searchQuery.value.trim()) return
@@ -197,6 +256,58 @@ function goToCitySearch(city) {
   if (city.sigunguCode) query.sigunguCode = String(city.sigunguCode)
   router.push({ path: '/attractions', query })
 }
+
+function goToAttractionDetail(attractionId) {
+  router.push(`/attraction/${attractionId}`)
+}
+
+function getTypeLabel(id) {
+  return CONTENT_TYPE_MAP[id]?.label || '관광지'
+}
+
+// ──── 인기 관광지 랭킹 ────
+const selectedRankingCity = ref('')
+const rankingList = ref([])
+const isRankingLoading = ref(false)
+
+async function loadRanking(regionCode) {
+  if (!regionCode) return
+  isRankingLoading.value = true
+  try {
+    const { data: res } = await regionApi.getPopularAttractions(regionCode)
+    rankingList.value = res.data ?? []
+  } catch {
+    rankingList.value = []
+  } finally {
+    isRankingLoading.value = false
+  }
+}
+
+const rankingRegionOptions = computed(() =>
+  regionStore.regions.map(r => ({ value: String(r.regionCode), label: r.regionName }))
+)
+
+function onRankingRegionChange(val) {
+  selectedRankingCity.value = val
+  loadRanking(val)
+}
+
+// 첫 번째 도시의 랭킹을 초기 로드
+function initRanking() {
+  const first = CITY_CARDS.value.find(c => c.code)
+  if (first) {
+    selectedRankingCity.value = first.code
+    loadRanking(first.code)
+  }
+}
+
+onMounted(async () => {
+  if (!regionStore.isLoaded) {
+    await regionStore.loadOnce()
+  }
+  updateCityCodes()
+  initRanking()
+})
 </script>
 
 <style scoped>
@@ -480,4 +591,156 @@ function goToCitySearch(city) {
 }
 .city-card__name { font-size: var(--font-size-xl); font-weight: 700; color: #fff; }
 .city-card__sub { font-size: var(--font-size-xs); color: rgba(255,255,255,.75); }
+
+/* ── 인기 관광지 섹션 ── */
+.popular-section {
+  margin-top: 2.5rem;
+  padding-bottom: 1rem;
+}
+
+/* 지역 드롭다운 필터 */
+.popular-filter {
+  max-width: 240px;
+  margin-bottom: 0.5rem;
+}
+
+/* 로딩 / 빈 상태 */
+.popular-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+}
+.popular-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 0;
+  color: var(--color-outline);
+  font-size: var(--font-size-sm);
+}
+
+/* 가로 스크롤 카드 컨테이너 */
+.popular-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.5rem 0 1rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.popular-scroll::-webkit-scrollbar { display: none; }
+
+/* 랭킹 카드 */
+.rank-card {
+  flex-shrink: 0;
+  width: 200px;
+  border: none;
+  background: var(--color-surface-container);
+  border-radius: var(--radius-DEFAULT);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.rank-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.rank-card__thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+}
+.rank-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.rank-card:hover .rank-card__img {
+  transform: scale(1.06);
+}
+
+/* 순위 뱃지 */
+.rank-card__rank {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+.rank-card__rank--1 { background: linear-gradient(135deg, #FFD700, #FFA000); }
+.rank-card__rank--2 { background: linear-gradient(135deg, #B0BEC5, #78909C); }
+.rank-card__rank--3 { background: linear-gradient(135deg, #D7A86E, #A67C52); }
+
+.rank-card__body {
+  padding: 0.625rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rank-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.rank-card__name {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.rank-card__badge {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.1rem 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-container);
+  color: var(--color-primary-deep);
+  white-space: nowrap;
+}
+
+.rank-card__addr {
+  font-size: var(--font-size-xs);
+  color: var(--color-outline);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rank-card__count {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-top: 0.125rem;
+}
+
+@media (min-width: 768px) {
+  .rank-card {
+    width: 220px;
+  }
+}
 </style>

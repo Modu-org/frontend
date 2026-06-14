@@ -39,7 +39,7 @@ const iconMap = {
 .toast {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 20px; border-radius: var(--radius-DEFAULT);
-  background: var(--color-inverse-surface); color: var(--color-inverse-on-surface);
+  background: var(--color-primary); color: #fff;
   font-size: var(--font-size-sm); font-weight: 600;
   box-shadow: var(--shadow-lg); pointer-events: auto;
 }

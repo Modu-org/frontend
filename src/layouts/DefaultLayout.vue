@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen w-full bg-[var(--color-surface)] flex flex-col">
     <AppHeader :title="title" :show-back="showBack" />
-    <main class="w-full flex-1 overflow-x-hidden">
+    <main class="w-full flex-1" style="overflow-x: clip;">
       <!-- 전체 너비 슬롯 (배너, 히어로 이미지 등) -->
       <slot name="full-bleed" />
 

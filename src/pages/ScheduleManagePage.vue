@@ -881,67 +881,56 @@ async function initMap() {
   }
 }
 
-// Voice
+// Voice — AI 명령 API 연동
+function speakText(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.lang = 'ko-KR'
+    utter.rate = 1.1
+    window.speechSynthesis.speak(utter)
+  }
+}
+
 async function handleVoice() {
   if (isListening.value) { voiceSearch.stopListening(); isListening.value = false; return }
+
+  // 일차 미선택 시 안내
+  if (!selectedDay.value) {
+    const msg = '음성 명령을 사용하려면 먼저 일차를 선택해주세요.'
+    showToast(msg, 'warning')
+    speakText(msg)
+    return
+  }
+
   isListening.value = true
   try {
     const { raw } = await voiceSearch.listenAndParse()
     showToast(`🎤 "${raw}"`, 'info')
 
-    // 현재 보이는 일정 노드 (일차별 visitOrder 기준 1~n)
-    const dayNodes = filteredDays.value.flatMap(d => d.nodes)
-    // 미등록 관광지 (nodeId 순 정렬, 1~n 번호)
-    const unscheduled = [...(schedule.value?.unscheduledNodes || [])].sort((a, b) => a.nodeId - b.nodeId)
+    // AI 명령 API 호출
+    const { data: res } = await scheduleApi.aiCommand(schedule.value.scheduleId, {
+      date: selectedDay.value,
+      text: raw,
+      apply: true,
+    })
 
-    // 위치 변경: "N번과 M번 바꿔" | "N번 M번 교환"
-    if (raw.includes('바꿔') || raw.includes('바꾸') || raw.includes('교환') || raw.includes('변경')) {
-      const nums = raw.match(/(\d+)/g)
-      if (nums && nums.length >= 2) {
-        const a = parseInt(nums[0]) - 1
-        const b = parseInt(nums[1]) - 1
-        if (selectedDay.value) {
-          const day = schedule.value.days.find(d => d.date === selectedDay.value)
-          if (day && day.nodes[a] && day.nodes[b]) {
-            const temp = day.nodes[a]
-            day.nodes[a] = day.nodes[b]
-            day.nodes[b] = temp
-            day.nodes.forEach((n, i) => { n.visitOrder = i + 1 })
-            await onDragEnd()
-            showToast(`${a + 1}번과 ${b + 1}번 위치를 변경했습니다.`, 'success')
-            return
-          }
-        }
-        showToast('해당 번호의 관광지를 찾을 수 없습니다. 일차를 선택해주세요.', 'error')
-        return
-      }
+    const result = res.data
+    // AI 응답 메시지 표시 (토스트 + 음성)
+    if (result.assistantMessage) {
+      showToast(result.assistantMessage, 'success')
+      speakText(result.assistantMessage)
     }
 
-    // 삭제: "N번 삭제"
-    if (raw.includes('삭제')) {
-      const m = raw.match(/(\d+)번/)
-      if (m) {
-        const idx = parseInt(m[1]) - 1
-        const node = dayNodes[idx] ?? unscheduled[idx]
-        if (node) { await deleteNode(node); return }
-      }
+    // 반환된 스케줄 데이터로 화면 갱신
+    if (result.schedule) {
+      schedule.value = result.schedule
     }
-
-    // 일정 읽기: "읽어" | "알려"
-    if (raw.includes('읽어') || raw.includes('알려')) {
-      const names = dayNodes.map((n, i) => `${i + 1}. ${n.placeName}`).join(', ')
-      showToast(names || '등록된 관광지가 없습니다.', 'info')
-      return
-    }
-
-    // 수정 모달 열기: "수정" | "제목"
-    if (raw.includes('수정') || raw.includes('제목')) {
-      openEditModal()
-      return
-    }
-
-    showToast('명령어: "바꿔", "삭제", "읽어", "수정"', 'info')
-  } catch { /* ignore */ } finally { isListening.value = false }
+  } catch (err) {
+    const errMsg = err?.response?.data?.message || '음성 명령 처리에 실패했습니다.'
+    showToast(errMsg, 'error')
+    speakText(errMsg)
+  } finally { isListening.value = false }
 }
 
 function goToAttractionDetail(node) {
@@ -953,7 +942,7 @@ function goToAttractionDetail(node) {
 .state-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1rem; gap: 1rem; text-align: center; }
 
 .hero { width: 100%; }
-.hero__img { width: 100%; aspect-ratio: 16/9; max-height: 360px; object-fit: cover; display: block; }
+.hero__img { width: 100%; aspect-ratio: 16/9; max-height: 480px; object-fit: cover; display: block; }
 
 .manage-body { padding: 1rem 1rem 6rem; }
 @media (min-width: 768px) { .manage-body { padding: 1.5rem 200px 6rem; } }

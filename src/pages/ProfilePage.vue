@@ -120,12 +120,12 @@
 
             <!-- 정렬 -->
             <div class="reviews-tab__filters">
-              <select v-model="myReviewSort" class="filter-sort" @change="loadMyReviews">
-                <option value="LATEST">최신순</option>
-                <option value="OLDEST">오래된순</option>
-                <option value="RATE_DESC">평점 높은순</option>
-                <option value="RATE_ASC">평점 낮은순</option>
-              </select>
+              <BaseSelect
+                v-model="myReviewSort"
+                :options="sortOptions"
+                class="filter-sort-wrap"
+                @change="loadMyReviews"
+              />
             </div>
 
             <div v-if="isMyReviewLoading" class="reviews-loading"><LoadingSpinner /></div>
@@ -241,6 +241,7 @@ import BaseCard from '@/components/common/BaseCard.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
@@ -316,6 +317,12 @@ async function handleLogout() {
 const myReviews = ref([])
 const isMyReviewLoading = ref(false)
 const myReviewSort = ref('LATEST')
+const sortOptions = [
+  { value: 'LATEST', label: '최신순' },
+  { value: 'OLDEST', label: '오래된순' },
+  { value: 'RATE_DESC', label: '평점 높은순' },
+  { value: 'RATE_ASC', label: '평점 낮은순' },
+]
 const myReviewTotal = computed(() => myReviews.value.length || null)
 
 // 탭이 reviews로 바뀌면 로드
@@ -459,7 +466,7 @@ function formatDate(dt) {
 .sidebar-user__name { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user__id { font-size: var(--font-size-xs); color: var(--color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.sidebar-nav { display: flex; flex-direction: column; padding: 0.5rem 0; }
+.sidebar-nav { display: flex; flex-direction: column; }
 
 @media (max-width: 767px) {
   .sidebar-nav { flex-direction: row; }
@@ -588,18 +595,7 @@ function formatDate(dt) {
 }
 
 .reviews-tab__filters { display: flex; justify-content: flex-end; }
-.filter-sort {
-  border: 1.5px solid var(--color-outline-variant);
-  border-radius: var(--radius-sm);
-  padding: 0.35rem 0.75rem;
-  font-size: var(--font-size-sm);
-  color: var(--color-on-surface);
-  background: var(--color-background);
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.filter-sort:focus { border-color: var(--color-primary); }
+.filter-sort-wrap { flex: 0 0 auto; min-width: 120px; }
 
 .reviews-loading { display: flex; justify-content: center; padding: 3rem; }
 .reviews-empty { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 4rem 1rem; text-align: center; color: var(--color-on-surface-variant); font-size: var(--font-size-sm); }

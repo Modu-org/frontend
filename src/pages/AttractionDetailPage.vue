@@ -118,12 +118,12 @@
                   </label>
 
                   <!-- 정렬 드롭다운 -->
-                  <select v-model="filterSort" class="filter-sort" @change="loadReviews">
-                    <option value="LATEST">최신순</option>
-                    <option value="OLDEST">오래된순</option>
-                    <option value="RATE_DESC">평점 높은순</option>
-                    <option value="RATE_ASC">평점 낮은순</option>
-                  </select>
+                  <BaseSelect
+                    v-model="filterSort"
+                    :options="sortOptions"
+                    class="filter-sort-wrap"
+                    @change="loadReviews"
+                  />
                 </div>
               </div>
 
@@ -285,6 +285,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ScheduleSelectModal from '@/components/common/ScheduleSelectModal.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import { attractionApi } from '@/api/attractionApi'
 import { reviewApi } from '@/api/reviewApi'
 import { useAuthStore } from '@/stores/authStore'
@@ -326,6 +327,12 @@ const visibleCount = ref(5)
 // 필터
 const filterMineOnly = ref(false)
 const filterSort = ref('LATEST')
+const sortOptions = [
+  { value: 'LATEST', label: '최신순' },
+  { value: 'OLDEST', label: '오래된순' },
+  { value: 'RATE_DESC', label: '평점 높은순' },
+  { value: 'RATE_ASC', label: '평점 낮은순' },
+]
 
 // 작성 폼
 const postForm = ref({ content: '', rate: 0, isPrivate: false })
@@ -669,7 +676,7 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 .detail-header__name { font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-on-surface); line-height: 1.2; margin-bottom: 0.375rem; }
 .detail-header__addr { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); margin-bottom: 0.5rem; }
 .detail-header__contacts { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.contact-link { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-primary-deep); font-weight: 600; text-decoration: underline; }
+.contact-link { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-primary-deep); font-weight: 600; text-decoration: none; }
 
 /* Section */
 .detail-section { margin-bottom: 1.5rem; }
@@ -720,8 +727,7 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 .filter-check { display: flex; align-items: center; gap: 0.25rem; cursor: pointer; }
 .filter-check input { accent-color: var(--color-primary); width: 15px; height: 15px; }
 .filter-check__label { display: flex; align-items: center; gap: 0.2rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); font-weight: 600; }
-.filter-sort { border: 1.5px solid var(--color-outline-variant); border-radius: var(--radius-sm); padding: 0.25rem 0.625rem; font-size: var(--font-size-sm); color: var(--color-on-surface); background: var(--color-background); cursor: pointer; outline: none; transition: border-color 0.15s; margin-left: auto; }
-.filter-sort:focus { border-color: var(--color-primary); }
+.filter-sort-wrap { margin-left: auto; flex: 0 0 auto; min-width: 110px; }
 
 /* 작성 폼 */
 .board-write { padding: 1rem; border-bottom: 1.5px solid var(--color-outline-variant); }
