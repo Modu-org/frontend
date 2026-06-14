@@ -142,7 +142,7 @@
             <span class="rank-card__addr">{{ item.address }}</span>
             <span class="rank-card__count">
               <span class="material-symbols-outlined" style="font-size: 0.875rem;">add_circle</span>
-              {{ item.addedCount }}명이 일정에 추가
+              {{ item.addedCount }}개의 일정에 추가됨
             </span>
           </div>
         </button>
@@ -227,7 +227,7 @@ async function handleVoiceSearch() {
   try {
     // 1. STT: 음성 → 텍스트
     const { raw } = await voiceSearch.listenAndParse()
-    showToast(`🎙️ "${raw}"`, 'info')
+    showToast(`"${raw}"`, 'info')
 
     // 2. 백엔드 AI 파싱 + 관광지 검색
     const { data: res } = await attractionApi.voiceSearch(raw, 1)

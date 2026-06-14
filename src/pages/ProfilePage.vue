@@ -448,7 +448,7 @@ function formatDate(dt) {
   gap: 0.75rem;
   padding: 1.25rem 1rem;
   border-bottom: 1.5px solid var(--color-outline-variant);
-  background: var(--color-primary-soft);
+  background: #fff;
 }
 
 .sidebar-avatar {
@@ -488,7 +488,7 @@ function formatDate(dt) {
   position: relative;
 }
 
-.sidebar-nav__item:hover { background: var(--color-surface-container-low); color: var(--color-on-surface); }
+.sidebar-nav__item:hover { background: var(--color-primary); color: var(--color-on-surface); }
 
 .sidebar-nav__item--active {
   color: var(--color-primary-deep);

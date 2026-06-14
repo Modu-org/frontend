@@ -35,7 +35,8 @@
               </li>
             </ul>
           </section>
-          <div v-else-if="!isListLoading" class="sched-empty">등록된 일정이 없습니다.</div>
+          <LoadingSpinner v-if="isListLoading" />
+          <div v-else-if="!schedules.length" class="sched-empty">등록된 일정이 없습니다.</div>
 
           <!-- 구분선 -->
           <div class="sched-divider">
@@ -128,6 +129,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { scheduleApi } from '@/api/scheduleApi'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'

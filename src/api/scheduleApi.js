@@ -62,7 +62,7 @@ export const scheduleApi = {
   // POST /schedules/{scheduleId}/auto-arrange
   autoArrange(scheduleId, data = {}) {
     return client.post(`/schedules/${scheduleId}/auto-arrange`, data, {
-      timeout: 60000 // 60 seconds timeout for high-latency arrangement calculations
+      timeout: 120000 // 120 seconds timeout for high-latency arrangement calculations
     })
   },
 

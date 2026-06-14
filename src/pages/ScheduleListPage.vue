@@ -431,7 +431,7 @@ async function handleVoice() {
   isListening.value = true
   try {
     const { raw } = await voiceSearch.listenAndParse()
-    showToast(`🎙️ "${raw}"`, 'info')
+    showToast(`"${raw}"`, 'info')
     // 간단한 명령 파싱: "N번째 일정" 선택
     const match = raw.match(/(\d+)번/)
     if (match) {

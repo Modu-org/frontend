@@ -555,7 +555,7 @@ async function handleVoiceSearch() {
   if (voiceSearch.isListening.value) { voiceSearch.stopListening(); return }
   try {
     const { raw } = await voiceSearch.listenAndParse()
-    showToast(`🎙️ "${raw}"`, 'info')
+    showToast(`"${raw}"`, 'info')
     isLoading.value = true
     try {
       const { data: res } = await attractionApi.voiceSearch(raw, 1)
