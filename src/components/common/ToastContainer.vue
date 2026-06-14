@@ -39,13 +39,14 @@ const iconMap = {
 .toast {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 20px; border-radius: var(--radius-DEFAULT);
-  background: var(--color-inverse-surface); color: var(--color-inverse-on-surface);
+  background: var(--color-primary); color: #fff;
   font-size: var(--font-size-sm); font-weight: 600;
   box-shadow: var(--shadow-lg); pointer-events: auto;
 }
-.toast--success { background: #2E7D52; color: #fff; }
-.toast--error   { background: var(--color-error); color: #fff; }
-.toast--warning { background: #E8A317; color: #1C1B18; }
+.toast--success { background: var(--color-primary); color: var(--color-on-primary); }
+.toast--error   { background: var(--color-primary); color: var(--color-error); }
+.toast--warning { background: var(--color-primary); color: var(--color-accent); }
+.toast--info    { background: var(--color-primary); color: var(--color-on-primary); }
 
 .toast__icon { font-size: 20px; flex-shrink: 0; }
 .toast__msg { flex: 1; }

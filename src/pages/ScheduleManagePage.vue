@@ -25,9 +25,10 @@
                 <span>{{ schedule.startDate }} ~ {{ schedule.endDate }}</span>
               </div>
             </div>
-            <button class="info-bar-view__edit-btn" @click="isEditingHeader = true" aria-label="수정">
-              <span class="material-symbols-outlined">edit</span>
-            </button>
+            <div class="info-bar-view__actions">
+              <BaseButton size="xs" variant="secondary" @click="isEditingHeader = true">수정</BaseButton>
+              <BaseButton size="xs" variant="accent" @click="handleDelete">삭제</BaseButton>
+            </div>
           </div>
 
           <!-- 2. 편집 모드 -->
@@ -113,19 +114,32 @@
           >{{ i + 1 }}일차</button>
         </div>
 
-        <!-- Route Controls (Visible when selectedDay is null OR viewTab is map) -->
-        <div v-if="selectedDay === null || viewTab === 'map'" class="route-bar">
-          <button :class="['route-btn', { 'route-btn--active': routeMode === 'departure' }]" @click="toggleRouteMode('departure')">
-            <span class="material-symbols-outlined" style="font-size:1rem;">flag</span>
-            {{ currentDepartureNodeId ? '출발지: ' + getNodeName(currentDepartureNodeId) : '출발지 선택' }}
-          </button>
-          <button :class="['route-btn', { 'route-btn--active': routeMode === 'arrival' }]" @click="toggleRouteMode('arrival')">
-            <span class="material-symbols-outlined" style="font-size:1rem;">location_on</span>
-            {{ currentArrivalNodeId ? '도착지: ' + getNodeName(currentArrivalNodeId) : '도착지 선택' }}
-          </button>
-          <button class="route-btn route-btn--auto" :disabled="isArranging" @click="handleAutoArrange">
-            <span class="material-symbols-outlined" style="font-size:1rem;">auto_fix_high</span>자동 배치
-          </button>
+        <!-- Route Controls (List view only) -->
+        <div v-if="viewTab === 'list' && selectedDay === null" class="route-section">
+          <!-- 자동 배치 안내 배너 -->
+          <div v-if="showAutoGuide" class="auto-guide-banner">
+            <span class="material-symbols-outlined" style="font-size:1.25rem;color:var(--color-primary);">route</span>
+            <div class="auto-guide-banner__text">
+              <strong>출발지와 도착지를 선택하면 최적 경로로 자동 배치합니다</strong>
+              <span>각 일차별로 출발지·도착지를 지정한 뒤 "자동 배치 실행"을 눌러주세요. (선택 안 하면 자동 결정)</span>
+            </div>
+            <button class="auto-guide-banner__close" @click="showAutoGuide = false">
+              <span class="material-symbols-outlined" style="font-size:1rem;">close</span>
+            </button>
+          </div>
+
+          <div class="route-bar">
+            <div class="route-btn-group">
+              <button class="route-btn route-btn--auto" :disabled="isArranging || !canAutoArrange" @click="onAutoArrangeClick">
+                <span class="material-symbols-outlined" style="font-size:1rem;">auto_fix_high</span>
+                {{ showAutoGuide ? '자동 배치 실행' : '자동 배치' }}
+              </button>
+              <span v-if="!canAutoArrange" class="auto-tooltip-wrap">
+                <span class="material-symbols-outlined auto-info-icon">info</span>
+                <span class="auto-tooltip">각 일차별 관광지 3개부터 자동배치가 가능합니다</span>
+              </span>
+            </div>
+          </div>
         </div>
 
         <!-- LIST VIEW -->
@@ -133,58 +147,99 @@
           <!-- Drag hint -->
           <p v-if="selectedDay" class="drag-hint">드래그로 순서 변경 후 저장하세요</p>
 
-          <!-- Node List -->
-          <template v-for="(d, di) in filteredDays" :key="d.date">
-            <div v-if="selectedDay === null" class="day-header">{{ di + 1 }}일차 · {{ formatDate(d.date) }}</div>
-            <draggable
-              v-model="d.nodes"
-              item-key="nodeId"
-              handle=".drag-handle"
-              :group="'schedule-nodes'"
-              :move="checkMoveLimit"
-              class="node-list"
-              @start="onDragStart"
-              @end="onDragEnd"
-            >
-              <template #item="{ element: node, index: ni }">
-                <div
-                  :class="['node-card', {
-                    'node-card--departure': departureNodes[d.date] === node.nodeId,
-                    'node-card--arrival': arrivalNodes[d.date] === node.nodeId,
-                    'node-card--route-select': routeMode
-                  }]"
-                  @click="handleNodeClick(node, d.date)"
-                >
-                  <span class="drag-handle material-symbols-outlined" style="font-size:1.1rem;color:var(--color-outline);cursor:grab;">drag_indicator</span>
-                  <span class="node-card__order">{{ ni + 1 }}</span>
-                  <div class="node-card__info">
-                    <div class="node-card__title-row">
-                      <span class="node-card__name">{{ node.placeName }}</span>
-                      <span class="node-card__badge">{{ getTypeLabel(node.contentTypeId) }}</span>
-                    </div>
-                    <span class="node-card__addr">{{ node.address }}</span>
-                  </div>
-                  <div class="node-card__actions">
-                    <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
-                      상세 보기
-                    </BaseButton>
-                    <BaseButton size="xs" variant="accent" @click.stop="deleteNode(node)">
-                      삭제
-                    </BaseButton>
-                  </div>
+          <!-- Node List Wrapper (오버레이 포함) -->
+          <div class="node-list-wrapper">
+            <!-- Processing Overlay -->
+            <div v-if="isProcessing" class="processing-overlay">
+              <div class="processing-spinner">
+                <LoadingSpinner />
+                <span>{{ processingMessage }}</span>
+              </div>
+            </div>
+
+            <!-- Node List -->
+            <template v-for="(d, di) in filteredDays" :key="d.date">
+              <div v-if="selectedDay === null" class="day-header">
+                <span>{{ di + 1 }}일차 · {{ formatDate(d.date) }}</span>
+                <div class="day-header__routes">
+                  <button
+                    :class="['day-route-btn', { 'day-route-btn--active': departureNodes[d.date] }]"
+                    @click.stop="toggleDayRouteMode(d.date, 'departure')"
+                    :title="departureNodes[d.date] ? '출발지: ' + getNodeName(departureNodes[d.date]) : '출발지 선택'"
+                  >
+                    <span class="material-symbols-outlined" style="font-size:0.8rem;">flag</span>
+                    {{ departureNodes[d.date] ? getNodeName(departureNodes[d.date]) : '출발지' }}
+                  </button>
+                  <button
+                    :class="['day-route-btn', { 'day-route-btn--active': arrivalNodes[d.date] }]"
+                    @click.stop="toggleDayRouteMode(d.date, 'arrival')"
+                    :title="arrivalNodes[d.date] ? '도착지: ' + getNodeName(arrivalNodes[d.date]) : '도착지 선택'"
+                  >
+                    <span class="material-symbols-outlined" style="font-size:0.8rem;">location_on</span>
+                    {{ arrivalNodes[d.date] ? getNodeName(arrivalNodes[d.date]) : '도착지' }}
+                  </button>
                 </div>
-              </template>
-            </draggable>
-          </template>
+              </div>
+              <draggable
+                v-model="d.nodes"
+                item-key="nodeId"
+                handle=".drag-handle"
+                :group="'schedule-nodes'"
+                :move="checkMoveLimit"
+                :disabled="isProcessing"
+                class="node-list"
+                @start="onDragStart"
+                @end="onDragEnd"
+              >
+                <template #item="{ element: node, index: ni }">
+                  <div
+                    :class="['node-card', {
+                      'node-card--departure': departureNodes[d.date] === node.nodeId,
+                      'node-card--arrival': arrivalNodes[d.date] === node.nodeId,
+                      'node-card--route-select': activeDayRoute
+                    }]"
+                    @click="handleNodeClick(node, d.date)"
+                  >
+                    <span class="drag-handle material-symbols-outlined" style="font-size:1.1rem;color:var(--color-outline);cursor:grab;">drag_indicator</span>
+                    <span class="node-card__order">{{ ni + 1 }}</span>
+                    <div class="node-card__info">
+                      <div class="node-card__title-row">
+                        <span class="node-card__name">{{ node.placeName }}</span>
+                        <span class="node-card__badge">{{ getTypeLabel(node.contentTypeId) }}</span>
+                      </div>
+                      <span class="node-card__addr">{{ node.address }}</span>
+                    </div>
+                    <div class="node-card__actions">
+                      <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
+                        상세 보기
+                      </BaseButton>
+                      <BaseButton size="xs" variant="accent" @click.stop="deleteNode(node)">
+                        삭제
+                      </BaseButton>
+                    </div>
+                  </div>
+                </template>
+              </draggable>
+            </template>
 
           <!-- Empty -->
           <div v-if="filteredDays.every(d => !d.nodes.length) && !unscheduledNodes.length" class="node-empty">
-            등록된 관광지가 없습니다.
+            <p>등록된 관광지가 없습니다.</p>
+            <button class="add-place-btn add-place-btn--lg" @click="router.push('/attractions')">
+              <span class="material-symbols-outlined" style="font-size:1rem;">add</span>
+              여행지 추가하기
+            </button>
           </div>
 
           <!-- Unscheduled Nodes (draggable) -->
           <div v-if="unscheduledNodes.length" class="unsched-section">
-            <h3 class="unsched-title">미등록 관광지</h3>
+            <div class="unsched-header">
+              <h3 class="unsched-title">미등록 관광지</h3>
+              <button class="add-place-btn" @click="router.push('/attractions')">
+                <span class="material-symbols-outlined" style="font-size:0.875rem;">add</span>
+                여행지 추가하기
+              </button>
+            </div>
             <draggable
               v-model="schedule.unscheduledNodes"
               item-key="nodeId"
@@ -218,10 +273,8 @@
             </draggable>
           </div>
 
-          <!-- Footer Actions -->
-          <div class="manage-footer">
-            <BaseButton variant="accent" @click="handleDelete">일정 삭제</BaseButton>
-          </div>
+          </div> <!-- /node-list-wrapper -->
+
         </template>
 
         <!-- MAP VIEW -->
@@ -245,24 +298,16 @@
                     :class="['map-sidebar-card', {
                       'node-card--departure': departureNodes[day.date] === n.nodeId,
                       'node-card--arrival': arrivalNodes[day.date] === n.nodeId,
-                      'node-card--route-select': routeMode
+                      'node-card--route-select': false
                     }]"
                     :style="`border-left-color: ${getDayColor(day.date)}`"
-                    @click="handleMapCardClick(n, day.date)"
+                    @click="focusMapMarker(n)"
                   >
-                    <div class="map-sidebar-card__thumb">
-                      <img
-                        :src="n.firstImageUrl || n.thumbnailImageUrl || FALLBACK"
-                        :alt="n.placeName"
-                        class="map-sidebar-card__img"
-                        @error="e => e.target.src = FALLBACK"
-                      />
-                      <span class="map-sidebar-card__order" :style="`background-color: ${getDayColor(day.date)}`">
-                        {{ n.visitOrder }}
-                      </span>
-                    </div>
                     <div class="map-sidebar-card__body">
                       <div class="map-sidebar-card__title-row">
+                        <span class="map-sidebar-card__order" :style="`background-color: ${getDayColor(day.date)}`">
+                          {{ n.visitOrder }}
+                        </span>
                         <h4 class="map-sidebar-card__name">{{ n.placeName }}</h4>
                         <span class="map-sidebar-card__badge">{{ getTypeLabel(n.contentTypeId) }}</span>
                       </div>
@@ -327,7 +372,22 @@ const viewTab = ref('list')
 const selectedDay = ref(null)
 const isListening = ref(false)
 const isArranging = ref(false)
+const isReordering = ref(false)
+const showAutoGuide = ref(false)
 const mapContainer = ref(null)
+
+const canAutoArrange = computed(() => {
+  if (!schedule.value?.days?.length) return false
+  return schedule.value.days.every(d => d.nodes.length >= 3)
+})
+
+const isProcessing = computed(() => isArranging.value || isListening.value || isReordering.value)
+const processingMessage = computed(() => {
+  if (isArranging.value) return '자동 배치 중...'
+  if (isReordering.value) return '순서 저장 중...'
+  if (isListening.value) return '음성 명령 처리 중...'
+  return ''
+})
 
 // 인라인 에디팅 폼 상태
 const isEditingHeader = ref(false)
@@ -339,10 +399,19 @@ const showCalendar = ref(false)
 const calendarYear = ref(new Date().getFullYear())
 const calendarMonth = ref(new Date().getMonth()) // 0 ~ 11
 
-// Route selection
-const routeMode = ref(null) // 'departure' | 'arrival' | null
+// Route selection (per-day)
+const activeDayRoute = ref(null) // { date, mode: 'departure'|'arrival' } or null
 const departureNodes = ref({}) // key: date string, value: nodeId
 const arrivalNodes = ref({})   // key: date string, value: nodeId
+
+function toggleDayRouteMode(date, mode) {
+  if (activeDayRoute.value?.date === date && activeDayRoute.value?.mode === mode) {
+    activeDayRoute.value = null
+    return
+  }
+  activeDayRoute.value = { date, mode }
+  showToast(`${mode === 'departure' ? '출발지' : '도착지'}로 설정할 관광지를 클릭하세요.`, 'info')
+}
 
 const currentDepartureNodeId = computed(() => {
   if (selectedDay.value) {
@@ -460,35 +529,23 @@ function getNodeName(nodeId) {
 }
 function formatDate(d) { return d ? new Date(d).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' }) : '' }
 
-function toggleRouteMode(mode) {
-  if (routeMode.value === mode) { routeMode.value = null; return }
-  routeMode.value = mode
-  showToast(`${mode === 'departure' ? '출발지' : '도착지'}로 설정할 노드를 선택하세요.`, 'info')
-}
-
 function handleNodeClick(node, date) {
-  if (!routeMode.value) return
-  if (!date) return
+  if (!activeDayRoute.value) return
+  const { date: targetDate, mode } = activeDayRoute.value
+  // 다른 일차의 노드를 클릭한 경우 무시
+  if (date !== targetDate) {
+    showToast('해당 일차의 관광지를 선택해주세요.', 'warning')
+    return
+  }
 
-  if (!departureNodes.value[date]) departureNodes.value[date] = null
-  if (!arrivalNodes.value[date]) arrivalNodes.value[date] = null
-
-  if (routeMode.value === 'departure') {
+  if (mode === 'departure') {
     departureNodes.value[date] = departureNodes.value[date] === node.nodeId ? null : node.nodeId
     if (arrivalNodes.value[date] === node.nodeId) arrivalNodes.value[date] = null
   } else {
     arrivalNodes.value[date] = arrivalNodes.value[date] === node.nodeId ? null : node.nodeId
     if (departureNodes.value[date] === node.nodeId) departureNodes.value[date] = null
   }
-  routeMode.value = null
-}
-
-function handleMapCardClick(node, date) {
-  if (routeMode.value) {
-    handleNodeClick(node, date)
-  } else {
-    focusMapMarker(node)
-  }
+  activeDayRoute.value = null
 }
 
 onMounted(async () => {
@@ -554,6 +611,17 @@ async function deleteNode(node) {
       showToast('삭제에 실패했습니다.', 'error')
     }
   }
+}
+
+function onAutoArrangeClick() {
+  if (!showAutoGuide.value) {
+    // 첫 클릭: 안내 배너 표시
+    showAutoGuide.value = true
+    return
+  }
+  // 두 번째 클릭: 실행
+  showAutoGuide.value = false
+  handleAutoArrange()
 }
 
 async function handleAutoArrange() {
@@ -741,6 +809,7 @@ async function handleDelete() {
 
 // 드래그앤드롭 변경 감지(Dirty Check)용 상태
 let dragStartState = null
+let reorderTimer = null
 
 function onDragStart() {
   hasShownLimitWarning = false
@@ -752,8 +821,8 @@ function onDragStart() {
   })))
 }
 
-// 드래그 종료 시 배치 저장 (리스트 간 이동 포함)
-async function onDragEnd() {
+// 드래그 종료 시 배치 저장 (2초 디바운스 + 오버레이)
+function onDragEnd() {
   hasShownLimitWarning = false
   if (!schedule.value?.days) return
 
@@ -762,33 +831,36 @@ async function onDragEnd() {
     d.nodes.forEach((n, i) => { n.visitOrder = i + 1 })
   })
 
-  // 1. 예외 처리: 모든 일차를 통틀어 배치된 노드가 0개인 경우 (미등록 목록 내 이동 또는 초기 빈 일정 상태)
+  // 예외 처리: 배치된 노드가 0개
   const totalPlacedNodes = schedule.value.days.reduce((sum, d) => sum + d.nodes.length, 0)
-  if (totalPlacedNodes === 0) {
-    // API 호출 불필요 (성공으로 자연스럽게 리턴하여 400 Bad Request 에러 예방)
-    return
-  }
+  if (totalPlacedNodes === 0) return
 
-  // 2. 변경 감지 (Dirty Check): 드래그 시작 시와 종료 시의 배치 구성이 동일하면 API 호출하지 않음
+  // 변경 감지
   const currentState = JSON.stringify(schedule.value.days.map(d => ({
     date: d.date,
     nodeIds: d.nodes.map(n => n.nodeId)
   })))
+  if (dragStartState === currentState) return
 
-  if (dragStartState === currentState) {
-    return
-  }
+  // 기존 타이머 취소 (연속 드래그 시 마지막 것만 실행)
+  if (reorderTimer) clearTimeout(reorderTimer)
 
-  try {
-    await scheduleApi.savePlacement(schedule.value.scheduleId, schedule.value.days.map(d => ({
-      date: d.date,
-      nodes: d.nodes.map((n, i) => ({ nodeId: n.nodeId, visitOrder: i + 1 }))
-    })))
-    showToast('순서가 저장되었습니다.', 'success')
-  } catch (err) {
-    showToast(err?.response?.data?.message || '저장에 실패했습니다.', 'error')
-    await loadDetail()
-  }
+  // 2초 디바운스 후 저장 요청 + 오버레이
+  reorderTimer = setTimeout(async () => {
+    isReordering.value = true
+    try {
+      await scheduleApi.savePlacement(schedule.value.scheduleId, schedule.value.days.map(d => ({
+        date: d.date,
+        nodes: d.nodes.map((n, i) => ({ nodeId: n.nodeId, visitOrder: i + 1 }))
+      })))
+      showToast('순서가 저장되었습니다.', 'success')
+    } catch (err) {
+      showToast(err?.response?.data?.message || '저장에 실패했습니다.', 'error')
+      await loadDetail()
+    } finally {
+      isReordering.value = false
+    }
+  }, 2000)
 }
 
 // Map
@@ -881,67 +953,56 @@ async function initMap() {
   }
 }
 
-// Voice
+// Voice — AI 명령 API 연동
+function speakText(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.lang = 'ko-KR'
+    utter.rate = 1.1
+    window.speechSynthesis.speak(utter)
+  }
+}
+
 async function handleVoice() {
   if (isListening.value) { voiceSearch.stopListening(); isListening.value = false; return }
+
+  // 일차 미선택 시 안내
+  if (!selectedDay.value) {
+    const msg = '음성 명령을 사용하려면 먼저 일차를 선택해주세요.'
+    showToast(msg, 'warning')
+    speakText(msg)
+    return
+  }
+
   isListening.value = true
   try {
     const { raw } = await voiceSearch.listenAndParse()
     showToast(`🎤 "${raw}"`, 'info')
 
-    // 현재 보이는 일정 노드 (일차별 visitOrder 기준 1~n)
-    const dayNodes = filteredDays.value.flatMap(d => d.nodes)
-    // 미등록 관광지 (nodeId 순 정렬, 1~n 번호)
-    const unscheduled = [...(schedule.value?.unscheduledNodes || [])].sort((a, b) => a.nodeId - b.nodeId)
+    // AI 명령 API 호출
+    const { data: res } = await scheduleApi.aiCommand(schedule.value.scheduleId, {
+      date: selectedDay.value,
+      text: raw,
+      apply: true,
+    })
 
-    // 위치 변경: "N번과 M번 바꿔" | "N번 M번 교환"
-    if (raw.includes('바꿔') || raw.includes('바꾸') || raw.includes('교환') || raw.includes('변경')) {
-      const nums = raw.match(/(\d+)/g)
-      if (nums && nums.length >= 2) {
-        const a = parseInt(nums[0]) - 1
-        const b = parseInt(nums[1]) - 1
-        if (selectedDay.value) {
-          const day = schedule.value.days.find(d => d.date === selectedDay.value)
-          if (day && day.nodes[a] && day.nodes[b]) {
-            const temp = day.nodes[a]
-            day.nodes[a] = day.nodes[b]
-            day.nodes[b] = temp
-            day.nodes.forEach((n, i) => { n.visitOrder = i + 1 })
-            await onDragEnd()
-            showToast(`${a + 1}번과 ${b + 1}번 위치를 변경했습니다.`, 'success')
-            return
-          }
-        }
-        showToast('해당 번호의 관광지를 찾을 수 없습니다. 일차를 선택해주세요.', 'error')
-        return
-      }
+    const result = res.data
+    // AI 응답 메시지 표시 (토스트 + 음성)
+    if (result.assistantMessage) {
+      showToast(result.assistantMessage, 'success')
+      speakText(result.assistantMessage)
     }
 
-    // 삭제: "N번 삭제"
-    if (raw.includes('삭제')) {
-      const m = raw.match(/(\d+)번/)
-      if (m) {
-        const idx = parseInt(m[1]) - 1
-        const node = dayNodes[idx] ?? unscheduled[idx]
-        if (node) { await deleteNode(node); return }
-      }
+    // 반환된 스케줄 데이터로 화면 갱신
+    if (result.schedule) {
+      schedule.value = result.schedule
     }
-
-    // 일정 읽기: "읽어" | "알려"
-    if (raw.includes('읽어') || raw.includes('알려')) {
-      const names = dayNodes.map((n, i) => `${i + 1}. ${n.placeName}`).join(', ')
-      showToast(names || '등록된 관광지가 없습니다.', 'info')
-      return
-    }
-
-    // 수정 모달 열기: "수정" | "제목"
-    if (raw.includes('수정') || raw.includes('제목')) {
-      openEditModal()
-      return
-    }
-
-    showToast('명령어: "바꿔", "삭제", "읽어", "수정"', 'info')
-  } catch { /* ignore */ } finally { isListening.value = false }
+  } catch (err) {
+    const errMsg = err?.response?.data?.message || '음성 명령 처리에 실패했습니다.'
+    showToast(errMsg, 'error')
+    speakText(errMsg)
+  } finally { isListening.value = false }
 }
 
 function goToAttractionDetail(node) {
@@ -953,7 +1014,7 @@ function goToAttractionDetail(node) {
 .state-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1rem; gap: 1rem; text-align: center; }
 
 .hero { width: 100%; }
-.hero__img { width: 100%; aspect-ratio: 16/9; max-height: 360px; object-fit: cover; display: block; }
+.hero__img { width: 100%; aspect-ratio: 16/9; max-height: 480px; object-fit: cover; display: block; }
 
 .manage-body { padding: 1rem 1rem 6rem; }
 @media (min-width: 768px) { .manage-body { padding: 1.5rem 200px 6rem; } }
@@ -991,27 +1052,31 @@ function goToAttractionDetail(node) {
   font-weight: 600;
 }
 
-.info-bar-view__edit-btn {
+.info-bar-view__actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1.5px solid var(--color-outline-variant);
-  background: var(--color-surface);
-  color: var(--color-on-surface-variant);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: 0.35rem;
   flex-shrink: 0;
 }
 
-.info-bar-view__edit-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  transform: scale(1.05);
+.info-bar-view__actions :deep(button) {
+  padding: 0.3rem 0.5rem !important;
+  font-size: 0.7rem !important;
+  height: auto !important;
 }
+
+@media (max-width: 767px) {
+  .info-bar-view {
+    flex-wrap: wrap;
+  }
+  .info-bar-view__content {
+    width: 100%;
+  }
+  .info-bar-view__actions {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+}
+
 
 .info-bar-container {
   margin-bottom: 1.25rem;
@@ -1306,20 +1371,77 @@ function goToAttractionDetail(node) {
 }
 .dtab--active { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary); }
 
-/* Route bar */
-.route-bar { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 0.75rem; }
+/* Route section */
+.route-section { margin-bottom: 0.75rem; }
+.route-bar { display: flex; flex-wrap: wrap; gap: 0.375rem; }
 .route-btn {
-  display: flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.625rem;
+  display: flex; align-items: center; gap: 0.375rem; padding: 0.4rem 0.625rem;
   border-radius: var(--radius-DEFAULT); font-size: var(--font-size-xs); font-weight: 600;
   border: 1.5px solid var(--color-outline-variant); background: var(--color-surface-container-lowest);
   color: var(--color-on-surface-variant); cursor: pointer; transition: all 0.15s; white-space: nowrap;
 }
+.route-btn__label { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.3; }
+.route-btn__label small { font-size: 0.625rem; font-weight: 500; color: var(--color-outline); }
 .route-btn--active { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-soft); }
 .route-btn--auto { border-color: var(--color-accent); color: var(--color-accent); }
-.route-btn--auto:hover { background: rgba(254,137,106,.1); }
+.route-btn--auto:hover:not(:disabled) { background: rgba(254,137,106,.1); }
+.route-btn--auto:disabled { opacity: 0.45; cursor: not-allowed; }
+.route-btn-group { display: flex; align-items: center; gap: 0.25rem; }
+
+/* Auto tooltip */
+.auto-tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+.auto-info-icon { font-size: 1rem; color: var(--color-outline); cursor: help; }
+.auto-tooltip {
+  display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--color-on-surface); color: var(--color-surface); font-size: var(--font-size-xs); font-weight: 600;
+  padding: 0.375rem 0.625rem; border-radius: var(--radius-sm); white-space: nowrap; z-index: 50;
+}
+.auto-tooltip-wrap:hover .auto-tooltip { display: block; }
+
+/* Auto guide banner */
+.auto-guide-banner {
+  display: flex; align-items: flex-start; gap: 0.625rem;
+  padding: 0.75rem 1rem; margin-bottom: 0.625rem;
+  background: var(--color-primary-soft); border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-DEFAULT);
+}
+.auto-guide-banner__text { flex: 1; display: flex; flex-direction: column; gap: 0.125rem; }
+.auto-guide-banner__text strong { font-size: var(--font-size-sm); color: var(--color-on-surface); }
+.auto-guide-banner__text span { font-size: var(--font-size-xs); color: var(--color-on-surface-variant); }
+.auto-guide-banner__close { background: none; border: none; cursor: pointer; color: var(--color-outline); padding: 0.125rem; border-radius: var(--radius-sm); }
+.auto-guide-banner__close:hover { background: rgba(0,0,0,.05); }
+
+/* Processing overlay */
+.node-list-wrapper {
+  position: relative;
+}
+.processing-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;
+  background: rgba(255,255,255,.75); backdrop-filter: blur(2px);
+  border-radius: var(--radius-DEFAULT);
+  display: flex; align-items: center; justify-content: center;
+}
+.processing-spinner { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+.processing-spinner span { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-on-surface-variant); }
 
 /* Day header */
-.day-header { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); padding: 0.5rem 0 0.25rem; }
+.day-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem;
+  font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); padding: 0.5rem 0 0.25rem;
+}
+.day-header__routes { display: flex; gap: 0.25rem; }
+.day-route-btn {
+  display: inline-flex; align-items: center; gap: 0.15rem;
+  padding: 0.15rem 0.4rem; border-radius: var(--radius-sm);
+  font-size: 0.65rem; font-weight: 600;
+  border: 1px solid var(--color-outline-variant); background: var(--color-surface);
+  color: var(--color-on-surface-variant); cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+}
+.day-route-btn--active {
+  border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-soft);
+}
+.day-route-btn:hover { border-color: var(--color-primary); }
 
 /* Node card */
 .node-list { display: flex; flex-direction: column; gap: 0.5rem; min-height: 2rem; }
@@ -1327,6 +1449,7 @@ function goToAttractionDetail(node) {
   display: flex; align-items: center; gap: 0.625rem; padding: 0.75rem 0.875rem;
   border-radius: var(--radius-DEFAULT); border: 1.5px solid var(--color-outline-variant);
   background: var(--color-surface-container-lowest); transition: border-color 0.15s;
+  flex-wrap: wrap;
 }
 .node-card--route-select { cursor: pointer; }
 .node-card--route-select:hover { border-color: var(--color-primary); }
@@ -1340,25 +1463,71 @@ function goToAttractionDetail(node) {
 }
 .node-card__info { flex: 1; min-width: 0; }
 .node-card__name { display: block; font-size: var(--font-size-sm); font-weight: 700; color: var(--color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node-card__addr { display: block; font-size: var(--font-size-xs); color: var(--color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .node-card__type { font-size: var(--font-size-xs); color: var(--color-on-surface-variant); }
 .node-card__del { background: none; border: none; cursor: pointer; color: var(--color-outline); padding: 0.25rem; border-radius: 50%; transition: color 0.15s; }
 .node-card__del:hover { color: var(--color-error); }
-.node-empty { text-align: center; padding: 2rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); }
+
+.node-card__actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.node-card__actions :deep(button) {
+  padding: 0.3rem 0.5rem !important;
+  font-size: 0.7rem !important;
+  height: auto !important;
+}
+
+@media (max-width: 767px) {
+  .node-card {
+    flex-wrap: wrap;
+  }
+  .node-card__info {
+    flex: 1;
+    min-width: 0;
+  }
+  .node-card__addr {
+    font-size: 0.65rem;
+    max-width: 100%;
+  }
+  .node-card__actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0.25rem;
+    padding-top: 0.375rem;
+    border-top: 1px solid var(--color-outline-variant);
+  }
+}
+
 
 /* Unsched */
 .unsched-section { margin-top: 1.25rem; }
-.unsched-title { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-on-surface-variant); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.25rem; }
+.unsched-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.unsched-title { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-on-surface-variant); display: flex; align-items: center; gap: 0.25rem; margin: 0; }
 
-/* Footer */
-.manage-footer { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+/* Add place button */
+.add-place-btn {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.3rem 0.625rem; border-radius: var(--radius-full);
+  font-size: var(--font-size-xs); font-weight: 700;
+  border: 1.5px solid var(--color-primary); background: var(--color-primary-soft);
+  color: var(--color-primary-deep); cursor: pointer; transition: all 0.15s;
+}
+.add-place-btn:hover { background: var(--color-primary); color: var(--color-on-primary); }
+.add-place-btn--lg { padding: 0.5rem 1rem; font-size: var(--font-size-sm); margin-top: 0.5rem; }
+
+.node-empty { text-align: center; padding: 2rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.node-empty p { margin: 0; }
 
 /* Map */
 .map-view-layout {
   display: flex;
   flex-direction: column-reverse;
   gap: 1rem;
-  height: calc(100vh - 280px);
-  min-height: 500px;
+  height: calc(100vh - 200px);
+  min-height: 600px;
 }
 
 @media (min-width: 768px) {
@@ -1382,8 +1551,8 @@ function goToAttractionDetail(node) {
 
 @media (min-width: 768px) {
   .map-view-sidebar {
-    max-width: 320px;
-    flex: 0 0 320px;
+    max-width: 400px;
+    flex: 0 0 400px;
   }
 }
 
@@ -1414,18 +1583,6 @@ function goToAttractionDetail(node) {
   border-radius: 2px;
 }
 
-.node-card__actions {
-  display: flex;
-  gap: 0.35rem;
-  flex-shrink: 0;
-}
-
-.node-card__actions :deep(button) {
-  padding: 0.3rem 0.5rem !important;
-  font-size: 0.7rem !important;
-  height: auto !important;
-}
-
 /* Premium Map Sidebar Card style (horizontal split layout) */
 .map-sidebar-card {
   display: flex;
@@ -1441,7 +1598,7 @@ function goToAttractionDetail(node) {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   flex-shrink: 0;
-  min-height: 110px;
+  min-height: auto;
 }
 
 .map-sidebar-card:hover {
@@ -1450,25 +1607,7 @@ function goToAttractionDetail(node) {
   border-color: var(--color-outline);
 }
 
-.map-sidebar-card__thumb {
-  position: relative;
-  width: 35%;
-  max-width: 100px;
-  min-height: 80px;
-  flex-shrink: 0;
-}
-
-.map-sidebar-card__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
 .map-sidebar-card__order {
-  position: absolute;
-  top: 0.25rem;
-  left: 0.25rem;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -1478,7 +1617,7 @@ function goToAttractionDetail(node) {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
 }
 
 .map-sidebar-card__body {

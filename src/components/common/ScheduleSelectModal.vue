@@ -35,7 +35,8 @@
               </li>
             </ul>
           </section>
-          <div v-else-if="!isListLoading" class="sched-empty">등록된 일정이 없습니다.</div>
+          <LoadingSpinner v-if="isListLoading" />
+          <div v-else-if="!schedules.length" class="sched-empty">등록된 일정이 없습니다.</div>
 
           <!-- 구분선 -->
           <div class="sched-divider">
@@ -61,26 +62,42 @@
               <label class="form-label">여행 기간</label>
               <div class="date-row">
                 <!-- 시작일 -->
-                <div class="date-field" @click="openCal('start')">
+                <div class="date-field" @click="toggleCal">
                   <span class="material-symbols-outlined" style="font-size:1rem;color:var(--color-primary);">calendar_month</span>
-                  <span :class="['date-value', { 'date-value--placeholder': !newForm.startDate }]">
-                    {{ newForm.startDate || '시작일' }}
-                  </span>
-                </div>
-                <span class="date-sep">~</span>
-                <!-- 종료일 -->
-                <div class="date-field" @click="openCal('end')">
-                  <span class="material-symbols-outlined" style="font-size:1rem;color:var(--color-primary);">calendar_month</span>
-                  <span :class="['date-value', { 'date-value--placeholder': !newForm.endDate }]">
-                    {{ newForm.endDate || '종료일' }}
+                  <span :class="['date-value', { 'date-value--placeholder': !newForm.startDate && !newForm.endDate }]">
+                    {{ newForm.startDate || '시작일' }} ~ {{ newForm.endDate || '종료일' }}
                   </span>
                 </div>
               </div>
             </div>
 
-            <!-- 인라인 캘린더 -->
-            <div v-if="calTarget" class="calendar-wrap">
-              <MiniCalendar :target="calTarget" :min-date="calTarget === 'end' ? newForm.startDate : null" @select="onCalSelect" />
+            <!-- 인라인 기간 선택 캘린더 -->
+            <div v-if="showCal" class="calendar-inline" @click.stop>
+              <div class="calendar-header">
+                <button type="button" class="calendar-nav-btn" @click="calPrevMonth">
+                  <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <span class="calendar-title">{{ calYear }}년 {{ calMonth + 1 }}월</span>
+                <button type="button" class="calendar-nav-btn" @click="calNextMonth">
+                  <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+              </div>
+              <div class="calendar-grid-weekdays">
+                <span v-for="d in ['일', '월', '화', '수', '목', '금', '토']" :key="d" class="weekday">{{ d }}</span>
+              </div>
+              <div class="calendar-grid-days">
+                <button type="button" v-for="day in calDays" :key="day.dateString"
+                  :class="['day-btn', {
+                    'day-btn--current': day.isCurrentMonth,
+                    'day-btn--outside': !day.isCurrentMonth,
+                    'day-btn--selected': day.dateString === newForm.startDate || day.dateString === newForm.endDate,
+                    'day-btn--in-range': isInRange(day.dateString),
+                    'day-btn--start-cap': day.dateString === newForm.startDate,
+                    'day-btn--end-cap': day.dateString === newForm.endDate,
+                  }]"
+                  @click="selectDate(day.dateString)"
+                >{{ day.dayNum }}</button>
+              </div>
             </div>
           </section>
         </div>
@@ -110,9 +127,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
-import MiniCalendar from '@/components/common/MiniCalendar.vue'
+import { ref, computed, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { scheduleApi } from '@/api/scheduleApi'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
@@ -132,7 +149,6 @@ const isListLoading = ref(false)
 const selectedId = ref(null)
 const mode = ref('existing') // 'existing' | 'new'
 const isSaving = ref(false)
-const calTarget = ref(null) // 'start' | 'end' | null
 
 const showConfirmDialog = ref(false)
 const savedScheduleId = ref(null)
@@ -140,6 +156,73 @@ const isSavedSuccess = ref(false)
 
 const newForm = ref({ title: '', startDate: '', endDate: '' })
 
+// 캘린더 상태
+const showCal = ref(false)
+const calYear = ref(new Date().getFullYear())
+const calMonth = ref(new Date().getMonth())
+
+function toggleCal() {
+  mode.value = 'new'
+  showCal.value = !showCal.value
+}
+
+function calPrevMonth() {
+  if (calMonth.value === 0) { calMonth.value = 11; calYear.value-- } else calMonth.value--
+}
+function calNextMonth() {
+  if (calMonth.value === 11) { calMonth.value = 0; calYear.value++ } else calMonth.value++
+}
+
+function formatDateString(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+const calDays = computed(() => {
+  const year = calYear.value
+  const month = calMonth.value
+  const firstDayIndex = new Date(year, month, 1).getDay()
+  const totalDays = new Date(year, month + 1, 0).getDate()
+  const prevTotal = new Date(year, month, 0).getDate()
+  const days = []
+  for (let i = firstDayIndex - 1; i >= 0; i--) {
+    const d = new Date(year, month - 1, prevTotal - i)
+    days.push({ dayNum: prevTotal - i, isCurrentMonth: false, dateString: formatDateString(d) })
+  }
+  for (let i = 1; i <= totalDays; i++) {
+    const d = new Date(year, month, i)
+    days.push({ dayNum: i, isCurrentMonth: true, dateString: formatDateString(d) })
+  }
+  const remaining = 42 - days.length
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, month + 1, i)
+    days.push({ dayNum: i, isCurrentMonth: false, dateString: formatDateString(d) })
+  }
+  return days
+})
+
+function selectDate(dateString) {
+  if (!newForm.value.startDate || (newForm.value.startDate && newForm.value.endDate)) {
+    newForm.value.startDate = dateString
+    newForm.value.endDate = ''
+  } else {
+    if (dateString < newForm.value.startDate) {
+      newForm.value.startDate = dateString
+    } else {
+      newForm.value.endDate = dateString
+    }
+  }
+}
+
+function isInRange(dateString) {
+  const { startDate, endDate } = newForm.value
+  if (!startDate || !endDate) return false
+  return dateString > startDate && dateString < endDate
+}
+
+// 스케줄 로드
 async function loadSchedules() {
   isListLoading.value = true
   try {
@@ -149,29 +232,21 @@ async function loadSchedules() {
   } catch { schedules.value = [] } finally { isListLoading.value = false }
 }
 
+// 다이얼로그 열림/닫힘 시 body 스크롤 잠금
 watch(() => props.visible, v => {
   if (v) {
+    document.body.style.overflow = 'hidden'
     loadSchedules()
     newForm.value = { title: '', startDate: '', endDate: '' }
-    calTarget.value = null
+    showCal.value = false
     mode.value = 'existing'
     isSavedSuccess.value = false
+    calYear.value = new Date().getFullYear()
+    calMonth.value = new Date().getMonth()
+  } else {
+    document.body.style.overflow = ''
   }
 })
-
-function openCal(target) {
-  mode.value = 'new'
-  calTarget.value = calTarget.value === target ? null : target
-}
-function onCalSelect(date) {
-  if (calTarget.value === 'start') {
-    newForm.value.startDate = date
-    if (newForm.value.endDate && newForm.value.endDate < date) newForm.value.endDate = date
-  } else {
-    newForm.value.endDate = date
-  }
-  calTarget.value = null
-}
 
 async function handleSave() {
   isSaving.value = true
@@ -217,7 +292,10 @@ function handleSavedWithoutMoving() {
   close()
 }
 
-function close() { emit('close') }
+function close() {
+  document.body.style.overflow = ''
+  emit('close')
+}
 </script>
 
 <style scoped>
@@ -281,26 +359,72 @@ function close() { emit('close') }
 .form-row { display: flex; flex-direction: column; gap: 0.35rem; }
 .form-label { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-on-surface); }
 .form-input {
-  padding: 0.625rem 0.875rem; border-radius: var(--radius-DEFAULT);
-  border: 1.5px solid var(--color-outline-variant); background: var(--color-surface-container-lowest);
-  font-size: var(--font-size-body); color: var(--color-on-surface); font-family: inherit; outline: none;
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-DEFAULT);
+  border: 1.5px solid var(--color-outline-variant); background: #fff;
+  font-size: var(--font-size-sm); color: var(--color-on-surface); font-family: inherit; outline: none;
   transition: border-color 0.15s;
 }
 .form-input:focus { border-color: var(--color-primary); }
 
 .date-row { display: flex; align-items: center; gap: 0.5rem; }
-.date-sep { color: var(--color-outline); font-size: var(--font-size-sm); flex-shrink: 0; }
 .date-field {
   flex: 1; display: flex; align-items: center; gap: 0.375rem;
-  padding: 0.5rem 0.75rem; border-radius: var(--radius-DEFAULT);
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-DEFAULT);
   border: 1.5px solid var(--color-outline-variant); cursor: pointer;
-  background: var(--color-surface-container-lowest); transition: border-color 0.15s;
+  background: #fff; transition: border-color 0.15s;
 }
 .date-field:hover { border-color: var(--color-primary); }
 .date-value { font-size: var(--font-size-sm); color: var(--color-on-surface); }
 .date-value--placeholder { color: var(--color-outline); }
 
-.calendar-wrap { border-radius: var(--radius-DEFAULT); overflow: hidden; border: 1.5px solid var(--color-outline-variant); }
+/* 인라인 캘린더 */
+.calendar-inline {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1.5px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1rem;
+  box-sizing: border-box;
+}
+
+.calendar-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.875rem;
+}
+.calendar-title { font-size: var(--font-size-sm); font-weight: 800; color: var(--color-on-surface); }
+.calendar-nav-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border: none; background: transparent;
+  border-radius: 50%; cursor: pointer; color: var(--color-on-surface-variant); transition: background 0.15s;
+}
+.calendar-nav-btn:hover { background: var(--color-surface-container-high); color: var(--color-primary); }
+
+.calendar-grid-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  text-align: center; font-size: var(--font-size-xs); font-weight: 700;
+  color: var(--color-outline); margin-bottom: 0.5rem;
+}
+
+.calendar-grid-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+
+.day-btn {
+  aspect-ratio: 1; border: none; background: transparent;
+  font-size: var(--font-size-xs); font-weight: 600; color: var(--color-on-surface);
+  border-radius: var(--radius-sm); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.day-btn--current { color: var(--color-on-surface); }
+.day-btn--outside { color: var(--color-outline-variant); }
+.day-btn:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+
+.day-btn--in-range {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary-deep); border-radius: 0;
+}
+.day-btn--selected {
+  background: var(--color-primary) !important;
+  color: var(--color-on-primary) !important; font-weight: 700;
+}
+.day-btn--start-cap { border-top-left-radius: 50%; border-bottom-left-radius: 50%; }
+.day-btn--end-cap { border-top-right-radius: 50%; border-bottom-right-radius: 50%; }
 
 /* 하단 */
 .modal-footer {

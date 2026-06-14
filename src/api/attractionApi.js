@@ -36,6 +36,11 @@ export const regionApi = {
   getAll() {
     return client.get('/regions')
   },
+
+  /** 지역별 인기 관광지 랭킹 조회 */
+  getPopularAttractions(regionCode) {
+    return client.get(`/regions/${regionCode}/popular-attractions`)
+  },
 }
 
 /** POST /posts, GET /posts */

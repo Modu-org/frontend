@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen w-full bg-[var(--color-surface)] flex flex-col">
     <AppHeader :title="title" :show-back="showBack" />
-    <main class="w-full flex-1 overflow-x-hidden">
+    <main class="w-full flex-1" style="overflow-x: clip;">
       <!-- 전체 너비 슬롯 (배너, 히어로 이미지 등) -->
       <slot name="full-bleed" />
 
@@ -9,7 +9,7 @@
       <div
         v-if="$slots.default"
         :class="[
-          noPadding ? 'px-0' : 'px-4 sm:px-8 md:px-[200px]',
+          noPadding ? 'px-0' : 'px-4 sm:px-8 md:px-[200px] max-w-[1920px] mx-auto w-full',
           noPadding ? '' : 'pt-6 md:pt-8'
         ]"
       >
@@ -111,6 +111,7 @@ defineProps({
 
 .footer-container {
   width: 100%;
+  max-width: 1920px;
   margin: 0 auto;
   padding-left: 1rem;
   padding-right: 1rem;

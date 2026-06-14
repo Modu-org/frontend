@@ -7,27 +7,51 @@
       <section class="filter-section">
         <input v-model="filterTitle" class="filter-input" placeholder="일정 이름 검색..." />
         <div class="date-row">
-          <div class="date-field" @click="openCal('filterStart')">
-            <span class="material-symbols-outlined" style="font-size:1rem;color:var(--color-primary);">calendar_month</span>
-            <span :class="['date-value', { 'date-value--placeholder': !filterStart }]">{{ filterStart || '시작일' }}</span>
+          <div class="date-field-wrap">
+            <div class="date-field" @click.stop="showFilterCal = !showFilterCal">
+              <span class="material-symbols-outlined" style="font-size:1rem;color:var(--color-primary);">calendar_month</span>
+              <span :class="['date-value', { 'date-value--placeholder': !filterStart && !filterEnd }]">
+                {{ filterStart || '시작일' }} ~ {{ filterEnd || '종료일' }}
+              </span>
+            </div>
+            <!-- 기간 선택 캘린더 (하나의 팝업) -->
+            <div v-if="showFilterCal" class="filter-cal-popup" @click.stop>
+              <div class="calendar-header">
+                <button type="button" class="calendar-nav-btn" @click="filterCalPrevMonth"><span class="material-symbols-outlined">chevron_left</span></button>
+                <span class="calendar-title">{{ filterCalYear }}년 {{ filterCalMonth + 1 }}월</span>
+                <button type="button" class="calendar-nav-btn" @click="filterCalNextMonth"><span class="material-symbols-outlined">chevron_right</span></button>
+              </div>
+              <div class="calendar-grid-weekdays">
+                <span v-for="d in ['일', '월', '화', '수', '목', '금', '토']" :key="d" class="weekday">{{ d }}</span>
+              </div>
+              <div class="calendar-grid-days">
+                <button type="button" v-for="day in filterCalDays" :key="day.dateString"
+                  :class="['day-btn', {
+                    'day-btn--current': day.isCurrentMonth,
+                    'day-btn--outside': !day.isCurrentMonth,
+                    'day-btn--selected': day.dateString === filterStart || day.dateString === filterEnd,
+                    'day-btn--in-range': isFilterInRange(day.dateString),
+                    'day-btn--start-cap': day.dateString === filterStart,
+                    'day-btn--end-cap': day.dateString === filterEnd,
+                  }]"
+                  @click="selectFilterDate(day.dateString)"
+                >{{ day.dayNum }}</button>
+              </div>
+            </div>
           </div>
-          <span class="date-sep">~</span>
-          <div class="date-field" @click="openCal('filterEnd')">
-            <span class="material-symbols-outlined" style="font-size:1rem;color:var(--color-primary);">calendar_month</span>
-            <span :class="['date-value', { 'date-value--placeholder': !filterEnd }]">{{ filterEnd || '종료일' }}</span>
-          </div>
-          <button v-if="filterTitle || filterStart || filterEnd" class="filter-clear-btn" @click="clearFilter">
-            <span class="material-symbols-outlined" style="font-size:1rem;">close</span>
-          </button>
-        </div>
-        <div v-if="filterCalTarget" class="calendar-wrap">
-          <MiniCalendar :min-date="filterCalTarget === 'filterEnd' ? filterStart : null" @select="onFilterCalSelect" />
+          <button v-if="filterTitle || filterStart || filterEnd" class="filter-reset-btn" @click="clearFilter">초기화</button>
         </div>
       </section>
 
       <!-- 내 일정 목록 -->
       <section v-if="filteredSchedules.length" class="list-section">
-        <h2 class="section-title">내 일정 목록</h2>
+        <div class="list-header">
+          <h2 class="section-title">내 일정 목록</h2>
+          <BaseButton size="sm" @click="showNewDialog = true">
+            <span class="material-symbols-outlined" style="font-size:1rem;">add</span>
+            새 일정 추가
+          </BaseButton>
+        </div>
         <p class="section-hint">관광지를 추가할 일정을 선택하세요.</p>
         <ul class="schedule-list">
           <li
@@ -50,71 +74,86 @@
       <div v-else class="state-wrap">
         <span class="material-symbols-outlined" style="font-size:3rem;color:var(--color-outline);">map</span>
         <p class="empty-text">{{ schedules.length ? '검색 결과가 없습니다.' : '등록된 일정이 없습니다.' }}</p>
-        <p class="empty-sub">아래 버튼으로 새 일정을 추가해보세요.</p>
+        <p class="empty-sub">새 일정을 추가해보세요.</p>
+        <BaseButton @click="showNewDialog = true">
+          <span class="material-symbols-outlined" style="font-size:1rem;">add</span>
+          새 일정 추가
+        </BaseButton>
       </div>
+    </template>
 
-      <!-- 새 일정 추가 -->
-      <section class="new-sched-section">
-        <h2 class="section-title">새 일정 추가</h2>
-        <p class="section-hint">새로 추가할 일정 정보를 입력해주세요.</p>
-
-        <div class="form-row">
-          <label class="form-label">일정 제목</label>
-          <input v-model="form.title" class="form-input" placeholder="일정 이름을 입력하세요" />
+    <!-- 새 일정 추가 다이얼로그 -->
+    <div v-if="showNewDialog" class="dialog-overlay" @click.self="closeNewDialog">
+      <div class="dialog-panel" @click.stop>
+        <!-- 헤더 -->
+        <div class="dialog-panel__header">
+          <h3>새 일정 추가</h3>
+          <button class="dialog-close-btn" @click="closeNewDialog">
+            <span class="material-symbols-outlined">close</span>
+          </button>
         </div>
 
-        <div class="form-row">
-          <label class="form-label">여행 기간</label>
-          <div class="info-bar__date-wrapper">
-            <button type="button" class="info-bar__date-btn" @click.stop="showCalendar = !showCalendar">
-              <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--color-primary);">calendar_month</span>
-              <span>{{ form.startDate || '시작일' }} ~ {{ form.endDate || '종료일' }}</span>
-            </button>
-            
-            <!-- 커스텀 캘린더 팝업 -->
-            <div v-if="showCalendar" class="calendar-popup" @click.stop>
-              <div class="calendar-header">
-                <button type="button" class="calendar-nav-btn" @click="prevMonth">
-                  <span class="material-symbols-outlined">chevron_left</span>
-                </button>
-                <span class="calendar-title">{{ calendarYear }}년 {{ calendarMonth + 1 }}월</span>
-                <button type="button" class="calendar-nav-btn" @click="nextMonth">
-                  <span class="material-symbols-outlined">chevron_right</span>
-                </button>
+        <!-- 스크롤 가능한 본문 -->
+        <div class="dialog-panel__body">
+          <p class="dialog-hint">새로 추가할 일정 정보를 입력해주세요.</p>
+
+          <div class="form-row">
+            <label class="form-label">일정 제목</label>
+            <input v-model="form.title" class="form-input" placeholder="일정 이름을 입력하세요" />
+          </div>
+
+          <div class="form-row">
+            <label class="form-label">여행 기간</label>
+            <div class="date-row">
+              <div class="date-field" @click.stop="showCalendar = !showCalendar">
+                <span class="material-symbols-outlined" style="font-size:1rem;color:var(--color-primary);">calendar_month</span>
+                <span :class="['date-value', { 'date-value--placeholder': !form.startDate && !form.endDate }]">
+                  {{ form.startDate || '시작일' }} ~ {{ form.endDate || '종료일' }}
+                </span>
               </div>
-              
-              <div class="calendar-grid-weekdays">
-                <span v-for="day in ['일', '월', '화', '수', '목', '금', '토']" :key="day" class="weekday">{{ day }}</span>
-              </div>
-              
-              <div class="calendar-grid-days">
-                <button
-                  type="button"
-                  v-for="day in calendarDays"
-                  :key="day.dateString"
-                  :class="['day-btn', {
-                    'day-btn--current': day.isCurrentMonth,
-                    'day-btn--outside': !day.isCurrentMonth,
-                    'day-btn--selected': day.dateString === form.startDate || day.dateString === form.endDate,
-                    'day-btn--in-range': isDateInRange(day.dateString),
-                    'day-btn--start-cap': day.dateString === form.startDate,
-                    'day-btn--end-cap': day.dateString === form.endDate,
-                  }]"
-                  @click="selectCalendarDate(day.dateString)"
-                >
-                  {{ day.dayNum }}
-                </button>
-              </div>
+            </div>
+          </div>
+
+          <!-- 인라인 기간 선택 캘린더 -->
+          <div v-if="showCalendar" class="calendar-inline" @click.stop>
+            <div class="calendar-header">
+              <button type="button" class="calendar-nav-btn" @click="prevMonth">
+                <span class="material-symbols-outlined">chevron_left</span>
+              </button>
+              <span class="calendar-title">{{ calendarYear }}년 {{ calendarMonth + 1 }}월</span>
+              <button type="button" class="calendar-nav-btn" @click="nextMonth">
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+            </div>
+            <div class="calendar-grid-weekdays">
+              <span v-for="day in ['일', '월', '화', '수', '목', '금', '토']" :key="day" class="weekday">{{ day }}</span>
+            </div>
+            <div class="calendar-grid-days">
+              <button type="button" v-for="day in calendarDays" :key="day.dateString"
+                :class="['day-btn', {
+                  'day-btn--current': day.isCurrentMonth,
+                  'day-btn--outside': !day.isCurrentMonth,
+                  'day-btn--selected': day.dateString === form.startDate || day.dateString === form.endDate,
+                  'day-btn--in-range': isDateInRange(day.dateString),
+                  'day-btn--start-cap': day.dateString === form.startDate,
+                  'day-btn--end-cap': day.dateString === form.endDate,
+                }]"
+                @click="selectCalendarDate(day.dateString)"
+              >{{ day.dayNum }}</button>
             </div>
           </div>
         </div>
 
-        <div class="form-actions">
-          <BaseButton variant="outline" @click="resetForm">초기화</BaseButton>
-          <BaseButton :loading="isSaving" @click="createSchedule">저장</BaseButton>
+        <!-- 하단 버튼 -->
+        <div class="dialog-panel__footer">
+          <button class="btn-cancel" @click="closeNewDialog">취소</button>
+          <button class="btn-save" :disabled="isSaving" @click="createSchedule">
+            <span v-if="isSaving" class="material-symbols-outlined" style="animation:spin .8s linear infinite;font-size:1.1rem;">progress_activity</span>
+            <span v-else>저장</span>
+          </button>
         </div>
-      </section>
-    </template>
+      </div>
+    </div>
 
     <!-- 음성 FAB -->
     <button
@@ -128,12 +167,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
-import MiniCalendar from '@/components/common/MiniCalendar.vue'
 import { scheduleApi } from '@/api/scheduleApi'
 import { useToast } from '@/composables/useToast'
 import { useVoiceSearch } from '@/composables/useVoiceSearch'
@@ -147,6 +185,13 @@ const isLoading = ref(true)
 const isSaving = ref(false)
 const filterCalTarget = ref(null)
 const isListening = ref(false)
+const showNewDialog = ref(false)
+const showFilterCal = ref(false)
+
+// 다이얼로그 열림 시 body 스크롤 잠금
+watch(showNewDialog, (v) => {
+  document.body.style.overflow = v ? 'hidden' : ''
+})
 
 const form = ref({ title: '', startDate: '', endDate: '' })
 
@@ -181,10 +226,17 @@ onBeforeUnmount(() => {
 })
 
 function handleOutsideClick(e) {
+  // 새 일정 캘린더 닫기
   const picker = document.querySelector('.calendar-popup')
   const trigger = document.querySelector('.info-bar__date-btn')
   if (picker && !picker.contains(e.target) && trigger && !trigger.contains(e.target)) {
     showCalendar.value = false
+  }
+  // 검색 필터 캘린더 닫기
+  const filterPop = document.querySelector('.filter-cal-popup')
+  const filterField = document.querySelector('.date-field')
+  if (showFilterCal.value && filterPop && !filterPop.contains(e.target) && filterField && !filterField.contains(e.target)) {
+    showFilterCal.value = false
   }
 }
 
@@ -198,19 +250,63 @@ async function loadSchedules() {
 
 function goToSchedule(id) { router.push(`/schedule/${id}`) }
 
-function openCal(t) {
-  if (t === 'filterStart' || t === 'filterEnd') {
-    filterCalTarget.value = filterCalTarget.value === t ? null : t
+// 검색 캘린더 기간 선택 (시작일 → 종료일 순서)
+function selectFilterDate(dateString) {
+  if (!filterStart.value || (filterStart.value && filterEnd.value)) {
+    // 시작일 선택 (or 재선택)
+    filterStart.value = dateString
+    filterEnd.value = ''
+  } else {
+    // 종료일 선택
+    if (dateString < filterStart.value) {
+      filterStart.value = dateString
+    } else {
+      filterEnd.value = dateString
+      showFilterCal.value = false
+    }
   }
 }
 
-function onFilterCalSelect(date) {
-  if (filterCalTarget.value === 'filterStart') { filterStart.value = date; if (filterEnd.value && filterEnd.value < date) filterEnd.value = '' }
-  else filterEnd.value = date
-  filterCalTarget.value = null
+function isFilterInRange(dateString) {
+  if (!filterStart.value || !filterEnd.value) return false
+  return dateString > filterStart.value && dateString < filterEnd.value
 }
 
-function clearFilter() { filterTitle.value = ''; filterStart.value = ''; filterEnd.value = ''; filterCalTarget.value = null }
+function clearFilter() { filterTitle.value = ''; filterStart.value = ''; filterEnd.value = ''; showFilterCal.value = false }
+
+// 검색 필터 캘린더 상태 (일정 추가 캘린더와 독립)
+const filterCalYear = ref(new Date().getFullYear())
+const filterCalMonth = ref(new Date().getMonth())
+
+function filterCalPrevMonth() {
+  if (filterCalMonth.value === 0) { filterCalMonth.value = 11; filterCalYear.value-- } else filterCalMonth.value--
+}
+function filterCalNextMonth() {
+  if (filterCalMonth.value === 11) { filterCalMonth.value = 0; filterCalYear.value++ } else filterCalMonth.value++
+}
+
+const filterCalDays = computed(() => {
+  const year = filterCalYear.value
+  const month = filterCalMonth.value
+  const firstDayIndex = new Date(year, month, 1).getDay()
+  const totalDays = new Date(year, month + 1, 0).getDate()
+  const prevTotal = new Date(year, month, 0).getDate()
+  const days = []
+  for (let i = firstDayIndex - 1; i >= 0; i--) {
+    const d = new Date(year, month - 1, prevTotal - i)
+    days.push({ dayNum: prevTotal - i, isCurrentMonth: false, dateString: formatDateString(d) })
+  }
+  for (let i = 1; i <= totalDays; i++) {
+    const d = new Date(year, month, i)
+    days.push({ dayNum: i, isCurrentMonth: true, dateString: formatDateString(d) })
+  }
+  const remaining = 42 - days.length
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, month + 1, i)
+    days.push({ dayNum: i, isCurrentMonth: false, dateString: formatDateString(d) })
+  }
+  return days
+})
 
 // 달력 날짜 생성
 const calendarDays = computed(() => {
@@ -308,6 +404,11 @@ function nextMonth() {
 
 function resetForm() { form.value = { title: '', startDate: '', endDate: '' }; showCalendar.value = false }
 
+function closeNewDialog() {
+  showNewDialog.value = false
+  resetForm()
+}
+
 async function createSchedule() {
   if (!form.value.title.trim()) { showToast('일정 제목을 입력해주세요.', 'error'); return }
   if (!form.value.startDate || !form.value.endDate) { showToast('여행 기간을 선택해주세요.', 'error'); return }
@@ -330,7 +431,7 @@ async function handleVoice() {
   isListening.value = true
   try {
     const { raw } = await voiceSearch.listenAndParse()
-    showToast(`🎙️ "${raw}"`, 'info')
+    showToast(`"${raw}"`, 'info')
     // 간단한 명령 파싱: "N번째 일정" 선택
     const match = raw.match(/(\d+)번/)
     if (match) {
@@ -351,21 +452,24 @@ async function handleVoice() {
 /* 검색 필터 */
 .filter-section { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .filter-input {
-  padding: 0.625rem 0.875rem; border-radius: var(--radius-DEFAULT);
-  border: 1.5px solid var(--color-outline-variant); background: var(--color-surface-container-lowest);
-  font-size: var(--font-size-body); color: var(--color-on-surface); font-family: inherit; outline: none;
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-DEFAULT);
+  border: 1.5px solid var(--color-outline-variant); background: #fff;
+  font-size: var(--font-size-sm); color: var(--color-on-surface); font-family: inherit; outline: none;
   transition: border-color 0.15s; width: 100%; box-sizing: border-box;
 }
 .filter-input:focus { border-color: var(--color-primary); }
-.filter-clear-btn {
-  background: none; border: none; cursor: pointer; padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-DEFAULT); color: var(--color-outline); flex-shrink: 0;
-  display: flex; align-items: center;
+.filter-reset-btn {
+  background: none; border: 1.5px solid var(--color-outline-variant);
+  border-radius: var(--radius-DEFAULT); padding: 0.35rem 0.75rem;
+  font-size: var(--font-size-sm); font-weight: 600;
+  color: var(--color-on-surface-variant); cursor: pointer;
+  transition: all 0.15s; flex-shrink: 0; white-space: nowrap;
 }
-.filter-clear-btn:hover { background: var(--color-surface-container); }
+.filter-reset-btn:hover { background: var(--color-surface-container); border-color: var(--color-primary); color: var(--color-primary); }
 
 .list-section { margin-bottom: 1.5rem; }
-.section-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-on-surface); margin-bottom: 0.25rem; }
+.list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
+.section-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-on-surface); margin: 0; }
 .section-hint { font-size: var(--font-size-xs); color: var(--color-on-surface-variant); margin-bottom: 0.75rem; }
 
 .schedule-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; }
@@ -382,13 +486,63 @@ async function handleVoice() {
 .schedule-card__right { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
 .schedule-card__count { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); }
 
-.new-sched-section { display: flex; flex-direction: column; gap: 0.875rem; margin-bottom: 6rem; }
+/* 다이얼로그 */
+.dialog-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.dialog-panel {
+  background: var(--color-surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%; max-width: 480px; max-height: 80vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.dialog-panel__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--color-outline-variant);
+}
+.dialog-panel__header h3 {
+  font-size: var(--font-size-lg); font-weight: 700; color: var(--color-on-surface); margin: 0;
+}
+.dialog-close-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--color-on-surface-variant); display: flex; align-items: center;
+  padding: 0.25rem; border-radius: var(--radius-sm); transition: background 0.15s;
+}
+.dialog-close-btn:hover { background: var(--color-surface-container-low); }
+.dialog-panel__body {
+  flex: 1; overflow-y: auto; padding: 1rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.875rem;
+}
+.dialog-hint {
+  font-size: var(--font-size-sm); color: var(--color-on-surface-variant); margin: 0;
+}
+.dialog-panel__footer {
+  padding: 1rem 1.25rem; border-top: 1px solid var(--color-outline-variant);
+  display: flex; gap: 0.625rem;
+}
+.btn-cancel {
+  flex: 1; padding: 0.75rem; border-radius: var(--radius-DEFAULT); border: 1.5px solid var(--color-outline-variant);
+  background: none; color: var(--color-on-surface-variant); font-size: var(--font-size-body); font-weight: 600; cursor: pointer;
+}
+.btn-save {
+  flex: 2; padding: 0.75rem; border-radius: var(--radius-DEFAULT); border: none;
+  background: var(--color-primary); color: var(--color-on-primary);
+  font-size: var(--font-size-body); font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 0.25rem;
+  transition: opacity 0.15s;
+}
+.btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .form-row { display: flex; flex-direction: column; gap: 0.35rem; }
 .form-label { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-on-surface); }
 .form-input {
-  padding: 0.625rem 0.875rem; border-radius: var(--radius-DEFAULT);
-  border: 1.5px solid var(--color-outline-variant); background: var(--color-surface-container-lowest);
-  font-size: var(--font-size-body); color: var(--color-on-surface); font-family: inherit; outline: none;
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-DEFAULT);
+  border: 1.5px solid var(--color-outline-variant); background: #fff;
+  font-size: var(--font-size-sm); color: var(--color-on-surface); font-family: inherit; outline: none;
   transition: border-color 0.15s;
 }
 .form-input:focus { border-color: var(--color-primary); }
@@ -405,8 +559,27 @@ async function handleVoice() {
 .date-value { font-size: var(--font-size-sm); color: var(--color-on-surface); }
 .date-value--placeholder { color: var(--color-outline); }
 
-.calendar-wrap { border-radius: var(--radius-DEFAULT); overflow: hidden; border: 1.5px solid var(--color-outline-variant); }
-.form-actions { display: flex; gap: 0.75rem; }
+.date-field-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.filter-cal-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  width: 280px;
+  max-width: 320px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  padding: 1.25rem 1rem;
+  box-sizing: border-box;
+}
+
 
 /* Voice FAB */
 .voice-fab {
@@ -422,56 +595,13 @@ async function handleVoice() {
   0%,100% { box-shadow: 0 0 0 0 rgba(254,137,106,.5); }
   50% { box-shadow: 0 0 0 12px rgba(254,137,106,0); }
 }
-.info-bar__date-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.info-bar__date-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.875rem;
-  border-radius: var(--radius-DEFAULT);
-  font-size: var(--font-size-body);
-  font-weight: 600;
-  border: 1.5px solid var(--color-outline-variant);
-  background: var(--color-surface-container-lowest);
-  color: var(--color-on-surface);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.info-bar__date-btn:hover {
-  border-color: var(--color-primary);
-}
-
-/* 커스텀 캘린더 팝업 */
-.calendar-popup {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  width: 100%;
-  max-width: 320px;
+/* 인라인 캘린더 */
+.calendar-inline {
   background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(12px);
   border: 1.5px solid var(--color-outline-variant);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
   padding: 1.25rem 1rem;
   box-sizing: border-box;
-}
-
-@media (min-width: 768px) {
-  .calendar-popup {
-    left: 0;
-    transform: none;
-    width: 320px;
-  }
 }
 
 .calendar-header {

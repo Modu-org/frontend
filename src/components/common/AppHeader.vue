@@ -1,37 +1,39 @@
 <template>
   <header class="sticky top-0 left-0 w-full z-50 h-[var(--header-height)]">
     <!-- Web Nav -->
-    <nav class="hidden md:flex bg-white w-full justify-between items-center px-6 shadow-sm shadow-[var(--color-on-surface)]/5 h-full">
-      <img src="/images/logo.png" alt="이음 로고(홈으로 이동)" class="logo w-38 cursor-pointer" style="width:152px;height:auto;" @click="$router.push('/')" />
-      <div class="flex gap-12 items-center" :class="{ 'ml-40': authStore.isAuthenticated }">
-        <router-link
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          :class="[
-            'text-sm font-semibold tracking-tight transition-colors duration-300 active:scale-95 px-3 py-1.5 rounded-[10px]',
-            isRouteActive(item.to)
-              ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/8'
-              : 'text-[var(--color-outline)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-container)]'
-          ]"
-        >
-          {{ item.label }}
-        </router-link>
-      </div>
-      <div class="flex items-center gap-3">
-        <template v-if="authStore.isAuthenticated">
-          <span class="greeting-text">{{ authStore.nickname }}님, 즐거운 여행하세요!</span>
-          <router-link to="/profile" class="profile-circle" aria-label="마이페이지로 이동">
-            <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
-            <span v-else class="material-symbols-outlined profile-circle__icon" style="font-variation-settings: 'FILL' 1;">person</span>
+    <nav class="hidden md:flex bg-white w-full shadow-sm shadow-[var(--color-on-surface)]/5 h-full justify-center">
+      <div class="flex w-full max-w-[1920px] justify-between items-center px-6 h-full">
+        <img src="/images/logo.png" alt="이음 로고(홈으로 이동)" class="logo w-38 cursor-pointer" style="width:152px;height:auto;" @click="$router.push('/')" />
+        <div class="flex gap-12 items-center" :class="{ 'ml-40': authStore.isAuthenticated }">
+          <router-link
+            v-for="item in navItems"
+            :key="item.to"
+            :to="item.to"
+            :class="[
+              'text-sm font-semibold tracking-tight transition-colors duration-300 active:scale-95 px-3 py-1.5 rounded-[10px]',
+              isRouteActive(item.to)
+                ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/8'
+                : 'text-[var(--color-outline)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-container)]'
+            ]"
+          >
+            {{ item.label }}
           </router-link>
-          <button class="logout-btn" aria-label="로그아웃" @click="handleLogout">
-            <span class="material-symbols-outlined">logout</span>
-          </button>
-        </template>
-        <template v-else>
-          <router-link to="/login" class="text-sm font-bold text-[var(--color-primary)] hover:underline">로그인</router-link>
-        </template>
+        </div>
+        <div class="flex items-center gap-3">
+          <template v-if="authStore.isAuthenticated">
+            <span class="greeting-text">{{ authStore.nickname }}님, 즐거운 여행하세요!</span>
+            <router-link to="/profile" class="profile-circle" aria-label="마이페이지로 이동">
+              <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
+              <span v-else class="material-symbols-outlined profile-circle__icon" style="font-variation-settings: 'FILL' 1;">person</span>
+            </router-link>
+            <button class="logout-btn" aria-label="로그아웃" @click="handleLogout">
+              <span class="material-symbols-outlined">logout</span>
+            </button>
+          </template>
+          <template v-else>
+            <router-link to="/login" class="text-sm font-bold text-[var(--color-primary)] hover:underline">로그인</router-link>
+          </template>
+        </div>
       </div>
     </nav>
 

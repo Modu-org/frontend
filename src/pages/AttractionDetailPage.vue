@@ -105,26 +105,6 @@
                     <span v-if="reviews.length" class="review-count">{{ reviews.length }}</span>
                   </h2>
                 </div>
-
-                <!-- 필터 바 -->
-                <div v-if="authStore.isAuthenticated || reviews.length > 0" class="board-filters">
-                  <!-- 내 리뷰만 보기 체크박스 -->
-                  <label v-if="authStore.isAuthenticated" class="filter-check">
-                    <input v-model="filterMineOnly" type="checkbox" @change="loadReviews" />
-                    <span class="filter-check__label">
-                      <span class="material-symbols-outlined" style="font-size:0.95rem;">person</span>
-                      내 리뷰만
-                    </span>
-                  </label>
-
-                  <!-- 정렬 드롭다운 -->
-                  <select v-model="filterSort" class="filter-sort" @change="loadReviews">
-                    <option value="LATEST">최신순</option>
-                    <option value="OLDEST">오래된순</option>
-                    <option value="RATE_DESC">평점 높은순</option>
-                    <option value="RATE_ASC">평점 낮은순</option>
-                  </select>
-                </div>
               </div>
 
               <!-- 작성/수정 폼 -->
@@ -134,7 +114,6 @@
                   <div v-if="myReview && !showWriteForm" class="review-written-notice">
                     <span class="material-symbols-outlined" style="color:var(--color-primary);">check_circle</span>
                     <span>이 관광지에 리뷰를 작성했습니다.</span>
-                    <button class="notice-edit-btn" @click="startEdit(myReview)">수정</button>
                   </div>
 
                   <!-- 작성 폼 -->
@@ -204,6 +183,23 @@
               </div>
               <div v-else class="board-login-prompt">
                 <BaseButton variant="outline" size="sm" @click="goLogin">로그인하고 후기 작성하기</BaseButton>
+              </div>
+
+              <!-- 필터 바 -->
+              <div v-if="authStore.isAuthenticated || reviews.length > 0" class="board-filters">
+                <label v-if="authStore.isAuthenticated" class="filter-check">
+                  <input v-model="filterMineOnly" type="checkbox" @change="loadReviews" />
+                  <span class="filter-check__label">
+                    <span class="material-symbols-outlined" style="font-size:0.95rem;">person</span>
+                    내 리뷰만 보기
+                  </span>
+                </label>
+                <BaseSelect
+                  v-model="filterSort"
+                  :options="sortOptions"
+                  class="filter-sort-wrap"
+                  @change="loadReviews"
+                />
               </div>
 
               <!-- 후기 목록 -->
@@ -285,6 +281,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ScheduleSelectModal from '@/components/common/ScheduleSelectModal.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import { attractionApi } from '@/api/attractionApi'
 import { reviewApi } from '@/api/reviewApi'
 import { useAuthStore } from '@/stores/authStore'
@@ -326,6 +323,12 @@ const visibleCount = ref(5)
 // 필터
 const filterMineOnly = ref(false)
 const filterSort = ref('LATEST')
+const sortOptions = [
+  { value: 'LATEST', label: '최신순' },
+  { value: 'OLDEST', label: '오래된순' },
+  { value: 'RATE_DESC', label: '평점 높은순' },
+  { value: 'RATE_ASC', label: '평점 낮은순' },
+]
 
 // 작성 폼
 const postForm = ref({ content: '', rate: 0, isPrivate: false })
@@ -591,7 +594,7 @@ async function handleVoiceAction() {
 
   try {
     const { raw } = await voiceSearch.listenAndParse()
-    showToast(`🎙️ "${raw}"`, 'info')
+    showToast(`"${raw}"`, 'info')
 
     // 1. "일정", "추가" 키워드 포함 시 일정 추가 창 띄우기 (예: "일정에 추가", "일정 추가")
     if (raw.includes('일정') && raw.includes('추가')) {
@@ -669,7 +672,7 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 .detail-header__name { font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-on-surface); line-height: 1.2; margin-bottom: 0.375rem; }
 .detail-header__addr { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); margin-bottom: 0.5rem; }
 .detail-header__contacts { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.contact-link { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-primary-deep); font-weight: 600; text-decoration: underline; }
+.contact-link { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-primary-deep); font-weight: 600; text-decoration: none; }
 
 /* Section */
 .detail-section { margin-bottom: 1.5rem; }
@@ -708,7 +711,7 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 .kakao-map { width: 100%; height: 240px; border-radius: var(--radius-DEFAULT); overflow: hidden; border: 1.5px solid var(--color-outline-variant); display: block; }
 
 /* 게시판 */
-.detail-board { background: var(--color-surface-container-lowest); border: 1.5px solid var(--color-outline-variant); border-radius: var(--radius-DEFAULT); overflow: hidden; margin-bottom: 5rem; }
+.detail-board { background: var(--color-surface-container-lowest); border: 1.5px solid var(--color-outline-variant); border-radius: var(--radius-DEFAULT); overflow: visible; margin-bottom: 5rem; }
 .board-header { padding: 1rem 1rem 0; }
 .board-header__top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
 
@@ -716,12 +719,11 @@ function formatDate(dt) { if (!dt) return ''; return new Date(dt).toLocaleDateSt
 .review-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; padding: 0 0.375rem; border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--font-size-xs); font-weight: 700; margin-left: 0.25rem; }
 
 /* 필터 바 */
-.board-filters { display: flex; align-items: center; gap: 0.75rem; padding-bottom: 0.75rem; flex-wrap: wrap; }
+.board-filters { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; flex-wrap: wrap; }
 .filter-check { display: flex; align-items: center; gap: 0.25rem; cursor: pointer; }
 .filter-check input { accent-color: var(--color-primary); width: 15px; height: 15px; }
 .filter-check__label { display: flex; align-items: center; gap: 0.2rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); font-weight: 600; }
-.filter-sort { border: 1.5px solid var(--color-outline-variant); border-radius: var(--radius-sm); padding: 0.25rem 0.625rem; font-size: var(--font-size-sm); color: var(--color-on-surface); background: var(--color-background); cursor: pointer; outline: none; transition: border-color 0.15s; margin-left: auto; }
-.filter-sort:focus { border-color: var(--color-primary); }
+.filter-sort-wrap { margin-left: auto; flex: 0 0 auto; min-width: 160px; }
 
 /* 작성 폼 */
 .board-write { padding: 1rem; border-bottom: 1.5px solid var(--color-outline-variant); }

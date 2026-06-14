@@ -21,23 +21,19 @@
     <section class="filter-section">
       <h3 class="filter-title">지역</h3>
       <div class="region-row">
-        <select v-model="selectedRegionCode" class="region-select" @change="onRegionChange">
-          <option value="">시/도 선택</option>
-          <option v-for="r in regionStore.regions" :key="r.regionCode" :value="String(r.regionCode)">
-            {{ r.regionName }}
-          </option>
-        </select>
-        <select
-          v-model="selectedDistrictCode"
-          class="region-select"
+        <BaseSelect
+          :modelValue="selectedRegionCode"
+          :options="regionOptions"
+          placeholder="시/도 선택"
+          @update:modelValue="v => { selectedRegionCode = v; onRegionChange() }"
+        />
+        <BaseSelect
+          :modelValue="selectedDistrictCode"
+          :options="districtOptions"
+          placeholder="군/구 선택"
           :disabled="!selectedRegionCode || !currentDistricts.length"
-          @change="onDistrictChange"
-        >
-          <option value="">군/구 선택</option>
-          <option v-for="d in currentDistricts" :key="d.districtCode" :value="String(d.districtCode)">
-            {{ d.districtName }}
-          </option>
-        </select>
+          @update:modelValue="v => { selectedDistrictCode = v; onDistrictChange() }"
+        />
       </div>
 
       <h3 class="filter-title">관광지 타입</h3>
@@ -213,10 +209,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseChip from '@/components/common/BaseChip.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ScheduleSelectModal from '@/components/common/ScheduleSelectModal.vue'
 import { attractionApi } from '@/api/attractionApi'
@@ -224,6 +221,7 @@ import { useRegionStore } from '@/stores/regionStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useVoiceSearch } from '@/composables/useVoiceSearch'
 import { useToast } from '@/composables/useToast'
+import { useAttractionFilterStore } from '@/stores/attractionFilterStore'
 import { CONTENT_TYPES, CONTENT_TYPE_MAP, getDefaultImg, FALLBACK_IMG } from '@/constants/enums'
 
 const route = useRoute()
@@ -232,6 +230,7 @@ const regionStore = useRegionStore()
 const authStore = useAuthStore()
 const voiceSearch = useVoiceSearch()
 const { showToast } = useToast()
+const attractionFilterStore = useAttractionFilterStore()
 
 const CONTENT_TYPES_FILTER = CONTENT_TYPES.filter(c =>
   ['12', '14', '39', '15', '28', '25'].includes(c.id)
@@ -250,6 +249,13 @@ const currentDistricts = computed(() => {
   const r = regionStore.regions.find(r => String(r.regionCode) === selectedRegionCode.value)
   return r?.districts || []
 })
+
+const regionOptions = computed(() =>
+  regionStore.regions.map(r => ({ value: String(r.regionCode), label: r.regionName }))
+)
+const districtOptions = computed(() =>
+  currentDistricts.value.map(d => ({ value: String(d.districtCode), label: d.districtName }))
+)
 
 // 검색/필터
 const keyword = ref('')
@@ -295,23 +301,18 @@ function restoreFiltersFromQuery() {
     filters.visual = q.visual === 'true'
     filters.hearing = q.hearing === 'true'
     filters.infant_family = q.infantFamily === 'true'
+    attractionFilterStore.markDefaultsApplied()
+  } else if (attractionFilterStore.hasAppliedDefaults) {
+    // 2. 이미 기본값을 적용한 적이 있는 세션 → URL에 없는 필터는 사용자가 의도적으로 해제한 것
+    //    URL 쿼리 파라미터에 있는 상태(위에서 이미 반영)를 그대로 존중
+    filters.physical = false
+    filters.visual = false
+    filters.hearing = false
+    filters.infant_family = false
   } else {
-    // 2. 세션 스토리지에 캐시된 필터가 있다면 복원 (새로고침 또는 상세에서 돌아온 경우)
-    const savedFiltersJson = sessionStorage.getItem('attraction_filters')
-    if (savedFiltersJson) {
-      try {
-        const saved = JSON.parse(savedFiltersJson)
-        filters.physical = !!saved.physical
-        filters.visual = !!saved.visual
-        filters.hearing = !!saved.hearing
-        filters.infant_family = !!saved.infant_family
-      } catch (e) {
-        applyDefaultAccessibility()
-      }
-    } else {
-      // 3. 캐시가 없는 완전히 새로운 진입인 경우 -> 회원 기본 정보 로드
-      applyDefaultAccessibility()
-    }
+    // 3. 완전히 새로운 진입 → 회원 프로필 기반 기본 접근성 정보 활성화
+    applyDefaultAccessibility()
+    attractionFilterStore.markDefaultsApplied()
   }
 }
 
@@ -405,10 +406,14 @@ watch(() => regionStore.isLoaded, (loaded) => {
   }
 })
 
-// 접근성 필터 실시간 변경 감지 및 세션 스토리지 백업
-watch(filters, (newFilters) => {
-  sessionStorage.setItem('attraction_filters', JSON.stringify(newFilters))
-}, { deep: true })
+// 관광지 영역(목록 ↔ 상세)을 벗어날 때 필터 기본값 플래그 리셋
+// → 다음 진입 시 authStore 기반 기본 접근성 정보가 다시 적용됨
+onBeforeRouteLeave((to) => {
+  const staysInAttractionArea = to.path.startsWith('/attraction')
+  if (!staysInAttractionArea) {
+    attractionFilterStore.reset()
+  }
+})
 
 function clearVoiceMode() { isVoiceMode.value = false }
 function clearVoiceModeOnFilter() {
@@ -550,7 +555,7 @@ async function handleVoiceSearch() {
   if (voiceSearch.isListening.value) { voiceSearch.stopListening(); return }
   try {
     const { raw } = await voiceSearch.listenAndParse()
-    showToast(`🎙️ "${raw}"`, 'info')
+    showToast(`"${raw}"`, 'info')
     isLoading.value = true
     try {
       const { data: res } = await attractionApi.voiceSearch(raw, 1)
@@ -717,10 +722,10 @@ async function initMap() {
 .search-section { margin-bottom: 1rem; }
 .search-row { display: flex; gap: 0.5rem; align-items: center; }
 .search-input {
-  flex: 1; padding: 0.75rem 1rem; border-radius: var(--radius-DEFAULT);
-  border: 2px solid var(--color-outline-variant); background: var(--color-surface-container-lowest);
-  font-size: var(--font-size-body); color: var(--color-on-surface);
-  outline: none; min-height: var(--btn-height); transition: border-color 0.18s; font-family: inherit;
+  flex: 1; padding: 0.625rem 0.75rem; border-radius: var(--radius-DEFAULT);
+  border: 1.5px solid var(--color-outline-variant); background: var(--color-surface-container-lowest);
+  font-size: var(--font-size-sm); color: var(--color-on-surface);
+  outline: none; transition: border-color 0.18s; font-family: inherit;
 }
 .search-input:focus { border-color: var(--color-primary); }
 .search-input::placeholder { color: var(--color-outline); }
@@ -732,17 +737,6 @@ async function initMap() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 .region-row { display: flex; gap: 0.5rem; margin-bottom: 0.25rem; }
-.region-select {
-  flex: 1; min-width: 0; padding: 0.625rem 0.75rem;
-  border-radius: var(--radius-DEFAULT); border: 2px solid var(--color-outline-variant);
-  background: var(--color-surface-container-lowest); color: var(--color-on-surface);
-  font-size: var(--font-size-sm); font-family: inherit; cursor: pointer; outline: none;
-  transition: border-color 0.18s; appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236F8F4E' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem;
-}
-.region-select:focus { border-color: var(--color-primary); }
-.region-select:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .results-section { min-height: 200px; overflow-x: hidden; width: 100%; }
 .results-center { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1rem; text-align: center; gap: 0.5rem; }
