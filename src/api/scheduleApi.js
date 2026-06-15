@@ -54,9 +54,8 @@ export const scheduleApi = {
     return client.delete(`/schedules/${scheduleId}/nodes/${nodeId}`)
   },
 
-  // PUT /schedules/{scheduleId}/nodes/placement
-  savePlacement(scheduleId, days) {
-    return client.put(`/schedules/${scheduleId}/nodes/placement`, { days })
+  savePlacement(scheduleId, days, unscheduledNodes) {
+    return client.put(`/schedules/${scheduleId}/nodes/placement`, { days, unscheduledNodes })
   },
 
   // POST /schedules/{scheduleId}/auto-arrange
