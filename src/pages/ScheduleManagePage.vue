@@ -1033,17 +1033,23 @@ function onDragEnd() {
   reorderTimer = setTimeout(async () => {
     isReordering.value = true
     try {
-      await scheduleApi.savePlacement(
-        schedule.value.scheduleId,
-        schedule.value.days.map(d => ({
+      const daysPayload = [
+        ...schedule.value.days.map(d => ({
           date: d.date,
           nodes: d.nodes.map((n, i) => ({ nodeId: n.nodeId, visitOrder: i + 1 }))
         })),
-        (schedule.value.unscheduledNodes || []).map((n) => ({
-          nodeId: n.nodeId,
-          visitOrder: null,
-          visitDate: null
-        }))
+        {
+          date: null,
+          nodes: (schedule.value.unscheduledNodes || []).map(n => ({
+            nodeId: n.nodeId,
+            visitOrder: null
+          }))
+        }
+      ]
+
+      await scheduleApi.savePlacement(
+        schedule.value.scheduleId,
+        daysPayload
       )
       showToast('순서가 저장되었습니다.', 'success')
       await loadDetail()
