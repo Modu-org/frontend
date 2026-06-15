@@ -9,6 +9,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = ref(null)
   const isLoading = ref(false)
+  const myReviews = ref([])
+  const isMyReviewsLoaded = ref(false)
 
   const isAuthenticated = computed(() => !!tokenRef.value)
   const isAdmin = computed(() => user.value?.role === 1)
@@ -55,6 +57,8 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       clearAccessToken()
       user.value = null
+      myReviews.value = []
+      isMyReviewsLoaded.value = false
     }
   }
 
@@ -156,6 +160,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user, isLoading, isInitialized,
     isAuthenticated, isAdmin, hasProfile, nickname,
+    myReviews, isMyReviewsLoaded,
     login, signup, logout, fetchMe, updateMe, checkId,
     tryRestoreSession,
   }

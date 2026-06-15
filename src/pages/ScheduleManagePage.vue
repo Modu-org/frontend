@@ -107,9 +107,14 @@
 
         <!-- Day Tabs (Always Visible) -->
         <div class="day-tabs">
-          <button :class="['dtab', { 'dtab--active': selectedDay === null }]" @click="selectedDay = null">전체</button>
+          <button
+            :class="['dtab', { 'dtab--active': selectedDay === null }]"
+            :style="selectedDay === null ? { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)', color: '#ffffff' } : {}"
+            @click="selectedDay = null"
+          >전체</button>
           <button v-for="(d, i) in schedule.days" :key="d.date"
             :class="['dtab', { 'dtab--active': selectedDay === d.date }]"
+            :style="getDayChipStyle(d.date, selectedDay === d.date)"
             @click="selectedDay = d.date"
           >{{ i + 1 }}일차</button>
         </div>
@@ -144,9 +149,6 @@
 
         <!-- LIST VIEW -->
         <template v-if="viewTab === 'list'">
-          <!-- Drag hint -->
-          <p v-if="selectedDay" class="drag-hint">드래그로 순서 변경 후 저장하세요</p>
-
           <!-- Node List Wrapper (오버레이 포함) -->
           <div class="node-list-wrapper">
             <!-- Processing Overlay -->
@@ -192,30 +194,43 @@
                 @end="onDragEnd"
               >
                 <template #item="{ element: node, index: ni }">
-                  <div
-                    :class="['node-card', {
-                      'node-card--departure': departureNodes[d.date] === node.nodeId,
-                      'node-card--arrival': arrivalNodes[d.date] === node.nodeId,
-                      'node-card--route-select': activeDayRoute
-                    }]"
-                    @click="handleNodeClick(node, d.date)"
-                  >
-                    <span class="drag-handle material-symbols-outlined" style="font-size:1.1rem;color:var(--color-outline);cursor:grab;">drag_indicator</span>
-                    <span class="node-card__order">{{ ni + 1 }}</span>
-                    <div class="node-card__info">
-                      <div class="node-card__title-row">
-                        <span class="node-card__name">{{ node.placeName }}</span>
-                        <span class="node-card__badge">{{ getTypeLabel(node.contentTypeId) }}</span>
+                  <div class="node-item-wrap">
+                    <!-- 간선 커넥터 (이전 노드와의 이동 정보) -->
+                    <div v-if="ni > 0 && getEdgeBetween(d, d.nodes[ni - 1]?.nodeId, node.nodeId)" class="edge-connector">
+                      <div class="edge-connector__line" :style="`border-left-color: ${getDayColor(d.date)}`" />
+                      <div class="edge-connector__info">
+                        <span class="material-symbols-outlined" style="font-size:0.85rem;">directions_car</span>
+                        <span>{{ formatDuration(getEdgeBetween(d, d.nodes[ni - 1]?.nodeId, node.nodeId).estimatedTimeMinutes) }}</span>
+                        <span class="edge-connector__dot">·</span>
+                        <span>{{ formatDistance(getEdgeBetween(d, d.nodes[ni - 1]?.nodeId, node.nodeId).distanceMeters) }}</span>
                       </div>
-                      <span class="node-card__addr">{{ node.address }}</span>
                     </div>
-                    <div class="node-card__actions">
-                      <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
-                        상세 보기
-                      </BaseButton>
-                      <BaseButton size="xs" variant="accent" @click.stop="deleteNode(node)">
-                        삭제
-                      </BaseButton>
+
+                    <div
+                      :class="['node-card', {
+                        'node-card--departure': departureNodes[d.date] === node.nodeId,
+                        'node-card--arrival': arrivalNodes[d.date] === node.nodeId,
+                        'node-card--route-select': activeDayRoute
+                      }]"
+                      @click="handleNodeClick(node, d.date)"
+                    >
+                      <span class="drag-handle material-symbols-outlined" style="font-size:1.1rem;color:var(--color-outline);cursor:grab;">drag_indicator</span>
+                      <span class="node-card__order">{{ ni + 1 }}</span>
+                      <div class="node-card__info">
+                        <div class="node-card__title-row">
+                          <span class="node-card__name">{{ node.placeName }}</span>
+                          <span class="node-card__badge">{{ getTypeLabel(node.contentTypeId) }}</span>
+                        </div>
+                        <span class="node-card__addr">{{ node.address }}</span>
+                      </div>
+                      <div class="node-card__actions">
+                        <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
+                          상세 보기
+                        </BaseButton>
+                        <BaseButton size="xs" variant="accent" @click.stop="deleteNode(node)">
+                          삭제
+                        </BaseButton>
+                      </div>
                     </div>
                   </div>
                 </template>
@@ -292,36 +307,47 @@
                     {{ getDayNumLabel(day.date) }}일차 · {{ formatDate(day.date) }}
                   </div>
                   
-                  <div
-                    v-for="n in day.nodes"
-                    :key="n.nodeId"
-                    :class="['map-sidebar-card', {
-                      'node-card--departure': departureNodes[day.date] === n.nodeId,
-                      'node-card--arrival': arrivalNodes[day.date] === n.nodeId,
-                      'node-card--route-select': false
-                    }]"
-                    :style="`border-left-color: ${getDayColor(day.date)}`"
-                    @click="focusMapMarker(n)"
-                  >
-                    <div class="map-sidebar-card__body">
-                      <div class="map-sidebar-card__title-row">
-                        <span class="map-sidebar-card__order" :style="`background-color: ${getDayColor(day.date)}`">
-                          {{ n.visitOrder }}
-                        </span>
-                        <h4 class="map-sidebar-card__name">{{ n.placeName }}</h4>
-                        <span class="map-sidebar-card__badge">{{ getTypeLabel(n.contentTypeId) }}</span>
-                      </div>
-                      <p class="map-sidebar-card__addr">{{ n.address }}</p>
-                      <div class="map-sidebar-card__actions">
-                        <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(n)">
-                          상세 보기
-                        </BaseButton>
-                        <BaseButton size="xs" variant="accent" @click.stop="deleteNode(n)">
-                          삭제
-                        </BaseButton>
+                  <template v-for="(n, ni) in day.nodes" :key="n.nodeId">
+                    <!-- 간선 커넥터 (이전 노드와의 이동 정보) -->
+                    <div v-if="ni > 0 && getEdgeBetween(day, day.nodes[ni - 1]?.nodeId, n.nodeId)" class="edge-connector">
+                      <div class="edge-connector__line" :style="`border-left-color: ${getDayColor(day.date)}`" />
+                      <div class="edge-connector__info">
+                        <span class="material-symbols-outlined" style="font-size:0.85rem;">directions_car</span>
+                        <span>{{ formatDuration(getEdgeBetween(day, day.nodes[ni - 1]?.nodeId, n.nodeId).estimatedTimeMinutes) }}</span>
+                        <span class="edge-connector__dot">·</span>
+                        <span>{{ formatDistance(getEdgeBetween(day, day.nodes[ni - 1]?.nodeId, n.nodeId).distanceMeters) }}</span>
                       </div>
                     </div>
-                  </div>
+
+                    <div
+                      :class="['map-sidebar-card', {
+                        'node-card--departure': departureNodes[day.date] === n.nodeId,
+                        'node-card--arrival': arrivalNodes[day.date] === n.nodeId,
+                        'node-card--route-select': false
+                      }]"
+                      :style="`border-left-color: ${getDayColor(day.date)}`"
+                      @click="focusMapMarker(n)"
+                    >
+                      <div class="map-sidebar-card__body">
+                        <div class="map-sidebar-card__title-row">
+                          <span class="map-sidebar-card__order" :style="`background-color: ${getDayColor(day.date)}`">
+                            {{ n.visitOrder }}
+                          </span>
+                          <h4 class="map-sidebar-card__name">{{ n.placeName }}</h4>
+                          <span class="map-sidebar-card__badge">{{ getTypeLabel(n.contentTypeId) }}</span>
+                        </div>
+                        <p class="map-sidebar-card__addr">{{ n.address }}</p>
+                        <div class="map-sidebar-card__actions">
+                          <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(n)">
+                            상세 보기
+                          </BaseButton>
+                          <BaseButton size="xs" variant="accent" @click.stop="deleteNode(n)">
+                            삭제
+                          </BaseButton>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
                 </template>
               </div>
               <div v-else class="sidebar-empty">
@@ -509,6 +535,42 @@ function getDayColor(dateStr) {
   const idx = schedule.value.days.findIndex(d => d.date === dateStr)
   if (idx === -1) return '#9CA3AF'
   return DAY_COLORS[idx % DAY_COLORS.length]
+}
+
+function getDayChipStyle(date, isActive) {
+  const color = getDayColor(date)
+  if (isActive) {
+    return {
+      backgroundColor: color,
+      borderColor: color,
+      color: '#ffffff',
+    }
+  } else {
+    return {
+      borderColor: `${color}40`,
+      color: color,
+      backgroundColor: `${color}08`,
+    }
+  }
+}
+
+// 간선(Edge) 정보 헬퍼
+function getEdgeBetween(day, fromNodeId, toNodeId) {
+  if (!day?.edges) return null
+  return day.edges.find(e => e.fromNodeId === fromNodeId && e.toNodeId === toNodeId) || null
+}
+
+function formatDistance(meters) {
+  if (!meters) return ''
+  return meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${meters}m`
+}
+
+function formatDuration(minutes) {
+  if (!minutes) return ''
+  if (minutes < 60) return `${minutes}분`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m > 0 ? `${h}시간 ${m}분` : `${h}시간`
 }
 
 function getDayNumLabel(dateStr) {
@@ -941,9 +1003,39 @@ async function initMap() {
       yAnchor: 0.5,
       xAnchor: 0.5
     })
-    
     overlay.setMap(map)
     currentOverlays.value.push(overlay)
+  })
+
+  // Polyline: 일차별 간선 경로 그리기
+  const nodePositionMap = {} // nodeId → LatLng
+  activeNodes.forEach(n => {
+    nodePositionMap[n.nodeId] = new window.kakao.maps.LatLng(n.latitude, n.longitude)
+  })
+
+  const daysToRender = selectedDay.value
+    ? schedule.value.days.filter(d => d.date === selectedDay.value)
+    : schedule.value.days
+
+  daysToRender.forEach(day => {
+    if (!day.edges?.length) return
+    const color = getDayColor(day.date)
+
+    day.edges.forEach(edge => {
+      const from = nodePositionMap[edge.fromNodeId]
+      const to = nodePositionMap[edge.toNodeId]
+      if (!from || !to) return
+
+      const polyline = new window.kakao.maps.Polyline({
+        path: [from, to],
+        strokeWeight: 3,
+        strokeColor: color,
+        strokeOpacity: 0.7,
+        strokeStyle: 'solid'
+      })
+      polyline.setMap(map)
+      currentOverlays.value.push(polyline)
+    })
   })
 
   if (activeNodes.length > 1) {
@@ -1080,10 +1172,10 @@ function goToAttractionDetail(node) {
 
 .info-bar-container {
   margin-bottom: 1.25rem;
-  background: var(--color-surface-container-lowest);
+  background: var(--color-on-primary);
   border: 1px solid var(--color-outline-variant);
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 2rem 1.5rem; 
 }
 
 .info-bar-edit {
@@ -1396,6 +1488,16 @@ function goToAttractionDetail(node) {
   background: var(--color-on-surface); color: var(--color-surface); font-size: var(--font-size-xs); font-weight: 600;
   padding: 0.375rem 0.625rem; border-radius: var(--radius-sm); white-space: nowrap; z-index: 50;
 }
+@media (max-width: 767px) {
+  .auto-tooltip {
+    left: -102px;
+    transform: none;
+    white-space: normal;
+    width: 220px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
 .auto-tooltip-wrap:hover .auto-tooltip { display: block; }
 
 /* Auto guide banner */
@@ -1427,7 +1529,7 @@ function goToAttractionDetail(node) {
 /* Day header */
 .day-header {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem;
-  font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); padding: 0.5rem 0 0.25rem;
+  font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); padding: 1.5rem 0 0.25rem;
 }
 .day-header__routes { display: flex; gap: 0.25rem; }
 .day-route-btn {
@@ -1443,8 +1545,55 @@ function goToAttractionDetail(node) {
 }
 .day-route-btn:hover { border-color: var(--color-primary); }
 
+/* Edge connector */
+.edge-connector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0;
+}
+.node-list .edge-connector {
+  padding-left: 55px;
+}
+.sidebar-list .edge-connector {
+  padding-left: 25px;
+}
+.edge-connector__line {
+  width: 2px;
+  align-self: stretch;
+  border-left: 2px solid var(--color-outline);
+  flex-shrink: 0;
+}
+.edge-connector__info {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.725rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background-color: var(--color-primary-soft);
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-outline-variant);
+  margin: 0.5rem 0;
+}
+.edge-connector__dot {
+  color: var(--color-outline);
+}
+
+.node-item-wrap + .node-item-wrap {
+  margin-top: 0.5rem;
+}
+.node-item-wrap + .node-item-wrap:has(.edge-connector) {
+  margin-top: 0;
+}
+
 /* Node card */
-.node-list { display: flex; flex-direction: column; gap: 0.5rem; min-height: 2rem; }
+.node-list { display: flex; flex-direction: column; min-height: 2rem; }
+.unsched-section .node-list {
+  gap: 0.5rem;
+}
 .node-card {
   display: flex; align-items: center; gap: 0.625rem; padding: 0.75rem 0.875rem;
   border-radius: var(--radius-DEFAULT); border: 1.5px solid var(--color-outline-variant);
@@ -1526,14 +1675,14 @@ function goToAttractionDetail(node) {
   display: flex;
   flex-direction: column-reverse;
   gap: 1rem;
-  height: calc(100vh - 200px);
-  min-height: 600px;
+  height: auto;
 }
 
 @media (min-width: 768px) {
   .map-view-layout {
     flex-direction: row;
-    height: 600px;
+    height: calc(100vh - 180px);
+    min-height: 750px;
     align-items: stretch;
   }
 }
@@ -1549,6 +1698,13 @@ function goToAttractionDetail(node) {
   overflow: hidden;
 }
 
+@media (max-width: 767px) {
+  .map-view-sidebar {
+    height: 720px;
+    flex: none;
+  }
+}
+
 @media (min-width: 768px) {
   .map-view-sidebar {
     max-width: 400px;
@@ -1560,7 +1716,7 @@ function goToAttractionDetail(node) {
   font-size: var(--font-size-md);
   font-weight: 800;
   color: var(--color-on-surface);
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .sidebar-list {
@@ -1568,8 +1724,17 @@ function goToAttractionDetail(node) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0;
   padding-right: 4px;
+}
+.sidebar-list > * + * {
+  margin-top: 0.75rem;
+}
+.sidebar-list > .edge-connector + .map-sidebar-card {
+  margin-top: 0;
+}
+.sidebar-list > .map-sidebar-card + .edge-connector {
+  margin-top: 0;
 }
 
 .sidebar-list::-webkit-scrollbar {
@@ -1693,7 +1858,7 @@ function goToAttractionDetail(node) {
 
 @media (max-width: 767px) {
   .map-view-main {
-    height: 350px;
+    height: 300px;
     flex: none;
   }
 }
@@ -1782,9 +1947,9 @@ function goToAttractionDetail(node) {
   font-size: var(--font-size-xs);
   font-weight: 800;
   color: var(--color-primary-deep);
-  padding: 0.625rem 0.25rem 0.25rem;
+  padding: 0rem 0.25rem 0.25rem;
   border-bottom: 2px solid var(--color-primary-100);
-  margin-bottom: 0.5rem;
+  /* margin-bottom: 0.5rem; */
   text-align: left;
   display: flex;
   align-items: center;

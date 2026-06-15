@@ -124,7 +124,7 @@
                 v-model="myReviewSort"
                 :options="sortOptions"
                 class="filter-sort-wrap"
-                @change="loadMyReviews"
+                @change="loadMyReviews(true)"
               />
             </div>
 
@@ -314,7 +314,7 @@ async function handleLogout() {
 }
 
 // ─── 내 리뷰 ────────────────────────────────────
-const myReviews = ref([])
+const myReviews = computed(() => authStore.myReviews)
 const isMyReviewLoading = ref(false)
 const myReviewSort = ref('LATEST')
 const sortOptions = [
@@ -327,7 +327,7 @@ const myReviewTotal = computed(() => myReviews.value.length || null)
 
 // 탭이 reviews로 바뀌면 로드
 watch(activeTab, (tab) => {
-  if (tab === 'reviews' && myReviews.value.length === 0) {
+  if (tab === 'reviews' && !authStore.isMyReviewsLoaded) {
     loadMyReviews()
   }
 })
@@ -336,13 +336,15 @@ onMounted(() => {
   if (activeTab.value === 'reviews') loadMyReviews()
 })
 
-async function loadMyReviews() {
+async function loadMyReviews(force = false) {
+  if (authStore.isMyReviewsLoaded && !force) return
   isMyReviewLoading.value = true
   try {
     const { data: res } = await reviewApi.getMyReviews({ sort: myReviewSort.value })
-    myReviews.value = res.data || []
+    authStore.myReviews = res.data || []
+    authStore.isMyReviewsLoaded = true
   } catch {
-    myReviews.value = []
+    authStore.myReviews = []
   } finally {
     isMyReviewLoading.value = false
   }
@@ -379,7 +381,7 @@ async function submitEditMyReview() {
     })
     showToast('리뷰가 수정되었습니다.', 'success')
     cancelEditMyReview()
-    await loadMyReviews()
+    await loadMyReviews(true)
   } catch {
     showToast('수정에 실패했습니다.', 'error')
   } finally {
@@ -402,7 +404,7 @@ async function confirmDeleteMyReview() {
     showToast('리뷰가 삭제되었습니다.', 'success')
     deleteDialog.visible = false
     deleteDialog.target = null
-    await loadMyReviews()
+    await loadMyReviews(true)
   } catch {
     showToast('삭제에 실패했습니다.', 'error')
     deleteDialog.visible = false
@@ -440,6 +442,14 @@ function formatDate(dt) {
 @media (max-width: 767px) {
   .profile-layout { flex-direction: column; gap: 1rem; }
   .profile-sidebar { width: 100%; position: static; }
+  .profile-content { width: 100%; }
+  .sidebar-nav__item {
+    flex: 1;
+    justify-content: center;
+  }
+  .sidebar-badge {
+    margin-left: 0.5rem;
+  }
 }
 
 .sidebar-user {
