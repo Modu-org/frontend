@@ -44,8 +44,8 @@ const iconMap = {
   box-shadow: var(--shadow-lg); pointer-events: auto;
 }
 .toast--success { background: var(--color-primary); color: var(--color-on-primary); }
-.toast--error   { background: var(--color-primary); color: var(--color-error); }
-.toast--warning { background: var(--color-primary); color: var(--color-accent); }
+.toast--error   { background: var(--color-error); color: var(--color-on-error); }
+.toast--warning { background: var(--color-warning); color: var(--color-on-warning); }
 .toast--info    { background: var(--color-primary); color: var(--color-on-primary); }
 
 .toast__icon { font-size: 20px; flex-shrink: 0; }

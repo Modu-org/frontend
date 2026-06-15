@@ -227,7 +227,7 @@ async function loadSchedules() {
   isListLoading.value = true
   try {
     const { data: res } = await scheduleApi.getAll()
-    schedules.value = res.data || []
+    schedules.value = Array.isArray(res.data) ? res.data : (res.data?.content ?? [])
     if (schedules.value.length) { selectedId.value = schedules.value[0].scheduleId; mode.value = 'existing' }
   } catch { schedules.value = [] } finally { isListLoading.value = false }
 }

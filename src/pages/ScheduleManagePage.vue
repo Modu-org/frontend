@@ -154,8 +154,7 @@
             <!-- Processing Overlay -->
             <div v-if="isProcessing" class="processing-overlay">
               <div class="processing-spinner">
-                <LoadingSpinner />
-                <span>{{ processingMessage }}</span>
+                <LoadingSpinner :text="processingMessage" />
               </div>
             </div>
 
@@ -184,10 +183,10 @@
               </div>
               <draggable
                 v-model="d.nodes"
+                :data-date="d.date"
                 item-key="nodeId"
                 handle=".drag-handle"
-                :group="'schedule-nodes'"
-                :move="checkMoveLimit"
+                :group="{ name: 'schedule-nodes', put: (to, from) => checkPutLimit(to, from, d) }"
                 :disabled="isProcessing"
                 class="node-list"
                 @start="onDragStart"
@@ -196,13 +195,17 @@
                 <template #item="{ element: node, index: ni }">
                   <div class="node-item-wrap">
                     <!-- 간선 커넥터 (이전 노드와의 이동 정보) -->
-                    <div v-if="ni > 0 && getEdgeBetween(d, d.nodes[ni - 1]?.nodeId, node.nodeId)" class="edge-connector">
+                    <div v-if="ni > 0" class="edge-connector">
                       <div class="edge-connector__line" :style="`border-left-color: ${getDayColor(d.date)}`" />
-                      <div class="edge-connector__info">
+                      <div v-if="getEdgeBetween(d, d.nodes[ni - 1]?.nodeId, node.nodeId)" class="edge-connector__info">
                         <span class="material-symbols-outlined" style="font-size:0.85rem;">directions_car</span>
                         <span>{{ formatDuration(getEdgeBetween(d, d.nodes[ni - 1]?.nodeId, node.nodeId).estimatedTimeMinutes) }}</span>
                         <span class="edge-connector__dot">·</span>
                         <span>{{ formatDistance(getEdgeBetween(d, d.nodes[ni - 1]?.nodeId, node.nodeId).distanceMeters) }}</span>
+                      </div>
+                      <div v-else class="edge-connector__info edge-connector__info--empty">
+                        <span class="material-symbols-outlined" style="font-size:0.85rem;">more_horiz</span>
+                        <span>거리 계산 필요</span>
                       </div>
                     </div>
 
@@ -227,6 +230,9 @@
                         <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
                           상세 보기
                         </BaseButton>
+                        <BaseButton size="xs" variant="primary" @click.stop="excludeNode(node)">
+                          일정에서 제외
+                        </BaseButton>
                         <BaseButton size="xs" variant="accent" @click.stop="deleteNode(node)">
                           삭제
                         </BaseButton>
@@ -247,7 +253,7 @@
           </div>
 
           <!-- Unscheduled Nodes (draggable) -->
-          <div v-if="unscheduledNodes.length" class="unsched-section">
+          <div class="unsched-section">
             <div class="unsched-header">
               <h3 class="unsched-title">미등록 관광지</h3>
               <button class="add-place-btn" @click="router.push('/attractions')">
@@ -260,10 +266,16 @@
               item-key="nodeId"
               handle=".drag-handle"
               :group="'schedule-nodes'"
+              :sort="false"
               class="node-list"
               @start="onDragStart"
               @end="onDragEnd"
             >
+              <template #header>
+                <div v-if="unscheduledNodes.length === 0" class="empty-dropzone empty-dropzone--unsched">
+                  여기로 관광지를 드래그하여 일정에서 제외하세요
+                </div>
+              </template>
               <template #item="{ element: node, index: ni }">
                 <div class="node-card node-card--unsched">
                   <span class="drag-handle material-symbols-outlined" style="font-size:1.1rem;color:var(--color-outline);cursor:grab;">drag_indicator</span>
@@ -309,13 +321,17 @@
                   
                   <template v-for="(n, ni) in day.nodes" :key="n.nodeId">
                     <!-- 간선 커넥터 (이전 노드와의 이동 정보) -->
-                    <div v-if="ni > 0 && getEdgeBetween(day, day.nodes[ni - 1]?.nodeId, n.nodeId)" class="edge-connector">
+                    <div v-if="ni > 0" class="edge-connector">
                       <div class="edge-connector__line" :style="`border-left-color: ${getDayColor(day.date)}`" />
-                      <div class="edge-connector__info">
+                      <div v-if="getEdgeBetween(day, day.nodes[ni - 1]?.nodeId, n.nodeId)" class="edge-connector__info">
                         <span class="material-symbols-outlined" style="font-size:0.85rem;">directions_car</span>
                         <span>{{ formatDuration(getEdgeBetween(day, day.nodes[ni - 1]?.nodeId, n.nodeId).estimatedTimeMinutes) }}</span>
                         <span class="edge-connector__dot">·</span>
                         <span>{{ formatDistance(getEdgeBetween(day, day.nodes[ni - 1]?.nodeId, n.nodeId).distanceMeters) }}</span>
+                      </div>
+                      <div v-else class="edge-connector__info edge-connector__info--empty">
+                        <span class="material-symbols-outlined" style="font-size:0.85rem;">more_horiz</span>
+                        <span>거리 계산 필요</span>
                       </div>
                     </div>
 
@@ -369,7 +385,15 @@
       <span class="material-symbols-outlined" style="font-size:1.75rem;">{{ isListening ? 'mic_off' : 'mic' }}</span>
     </button>
 
-
+    <!-- BaseDialog -->
+    <BaseDialog
+      v-model="showConfirmDialog"
+      :title="dialogConfig.title"
+      :message="dialogConfig.message"
+      :confirm-variant="dialogConfig.confirmVariant"
+      @confirm="dialogConfig.onConfirm"
+      @cancel="dialogConfig.onCancel"
+    />
   </DefaultLayout>
 </template>
 
@@ -379,6 +403,7 @@ import { useRoute, useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { scheduleApi } from '@/api/scheduleApi'
 import { attractionApi } from '@/api/attractionApi'
@@ -391,6 +416,32 @@ const route = useRoute()
 const router = useRouter()
 const { showToast } = useToast()
 const voiceSearch = useVoiceSearch()
+
+const showConfirmDialog = ref(false)
+const dialogConfig = ref({
+  title: '',
+  message: '',
+  confirmVariant: 'primary',
+  onConfirm: () => {},
+  onCancel: () => {}
+})
+
+function openConfirm({ title, message, confirmVariant = 'primary', onConfirm, onCancel }) {
+  dialogConfig.value = {
+    title,
+    message,
+    confirmVariant,
+    onConfirm: () => {
+      onConfirm?.()
+      showConfirmDialog.value = false
+    },
+    onCancel: () => {
+      onCancel?.()
+      showConfirmDialog.value = false
+    }
+  }
+  showConfirmDialog.value = true
+}
 
 const schedule = ref(null)
 const isLoading = ref(true)
@@ -409,7 +460,7 @@ const canAutoArrange = computed(() => {
 
 const isProcessing = computed(() => isArranging.value || isListening.value || isReordering.value)
 const processingMessage = computed(() => {
-  if (isArranging.value) return '자동 배치 중...'
+  if (isArranging.value) return '여행 일정을 수정 중입니다'
   if (isReordering.value) return '순서 저장 중...'
   if (isListening.value) return '음성 명령 처리 중...'
   return ''
@@ -457,10 +508,11 @@ const currentArrivalNodeId = computed(() => {
 
 let hasShownLimitWarning = false
 
-function checkMoveLimit(evt) {
-  if (evt.from !== evt.to && evt.relatedContext.list && evt.relatedContext.list.length >= 8) {
+function checkPutLimit(to, from, targetDay) {
+  if (to.el === from.el) return true
+  if (targetDay && targetDay.nodes.length >= 8) {
     if (!hasShownLimitWarning) {
-      showToast('각 일차에는 최대 8개의 관광지만 등록할 수 있습니다.', 'warning')
+      showToast('각 일차에는 최대 8개의 관광지만 등록할 수 있습니다.', 'error')
       hasShownLimitWarning = true
     }
     return false
@@ -649,29 +701,81 @@ async function loadDetail() {
   } finally { isLoading.value = false }
 }
 
-async function deleteNode(node) {
-  if (!confirm(`"${node.placeName}"을(를) 삭제하시겠습니까?`)) return
+function deleteNode(node) {
+  openConfirm({
+    title: '관광지 삭제',
+    message: `"${node.placeName}"을(를) 삭제하시겠습니까?`,
+    confirmVariant: 'accent',
+    onConfirm: async () => {
+      try {
+        await scheduleApi.deleteNode(schedule.value.scheduleId, node.nodeId)
+        showToast('삭제되었습니다.', 'success')
+
+        // Reset deleted node from per-day selections
+        for (const date in departureNodes.value) {
+          if (departureNodes.value[date] === node.nodeId) {
+            departureNodes.value[date] = null
+          }
+        }
+        for (const date in arrivalNodes.value) {
+          if (arrivalNodes.value[date] === node.nodeId) {
+            arrivalNodes.value[date] = null
+          }
+        }
+
+        await loadDetail()
+      } catch (err) {
+        if (err?.response?.status !== 401) {
+          showToast('삭제에 실패했습니다.', 'error')
+        }
+      }
+    }
+  })
+}
+
+function excludeNode(node) {
   try {
-    await scheduleApi.deleteNode(schedule.value.scheduleId, node.nodeId)
-    showToast('삭제되었습니다.', 'success')
-
-    // Reset deleted node from per-day selections
-    for (const date in departureNodes.value) {
-      if (departureNodes.value[date] === node.nodeId) {
-        departureNodes.value[date] = null
-      }
-    }
-    for (const date in arrivalNodes.value) {
-      if (arrivalNodes.value[date] === node.nodeId) {
-        arrivalNodes.value[date] = null
-      }
+    if (!schedule.value || !schedule.value.days) {
+      showToast('일정 정보가 없습니다.', 'error')
+      return
     }
 
-    await loadDetail()
-  } catch (err) {
-    if (err?.response?.status !== 401) {
-      showToast('삭제에 실패했습니다.', 'error')
+    let targetDay = null
+    let nodeIndex = -1
+
+    for (const day of schedule.value.days) {
+      nodeIndex = day.nodes.findIndex(n => Number(n.nodeId) === Number(node.nodeId))
+      if (nodeIndex !== -1) {
+        targetDay = day
+        break
+      }
     }
+
+    if (!targetDay) {
+      showToast('일정에서 해당 관광지를 찾을 수 없습니다.', 'error')
+      return
+    }
+
+    // 일차 노드 목록에서 제거 및 반응성 보장을 위한 새 배열 할당
+    const newDayNodes = [...targetDay.nodes]
+    const [removedNode] = newDayNodes.splice(nodeIndex, 1)
+    targetDay.nodes = newDayNodes
+
+    // 미등록 관광지 목록에 추가 및 반응성 보장을 위한 새 배열 할당
+    const newUnscheduled = schedule.value.unscheduledNodes ? [...schedule.value.unscheduledNodes] : []
+    const exists = newUnscheduled.some(n => Number(n.nodeId) === Number(removedNode.nodeId))
+    if (!exists) {
+      removedNode.visitOrder = null
+      removedNode.visitDate = null
+      newUnscheduled.push(removedNode)
+    }
+    schedule.value.unscheduledNodes = newUnscheduled
+
+    dragStartState = '' // 변경사항 저장을 위한 Dirty Check 강제 우회
+    onDragEnd()
+  } catch (e) {
+    console.error('excludeNode error:', e)
+    showToast('제외 처리에 실패했습니다.', 'error')
   }
 }
 
@@ -826,6 +930,23 @@ async function saveInlineEdit() {
   if (!editForm.value.title.trim()) { showToast('일정 제목을 입력하세요.', 'error'); return }
   if (!editForm.value.startDate || !editForm.value.endDate) { showToast('여행 일자를 완성해주세요.', 'error'); return }
   
+  const performSave = async () => {
+    isSavingEdit.value = true
+    try {
+      await scheduleApi.update(schedule.value.scheduleId, {
+        title: editForm.value.title.trim(),
+        startDate: editForm.value.startDate,
+        endDate: editForm.value.endDate,
+      })
+      showToast('일정이 성공적으로 수정되었습니다.', 'success')
+      showCalendar.value = false
+      isEditingHeader.value = false
+      await loadDetail()
+    } catch (err) {
+      showToast(err?.response?.data?.message || '수정에 실패했습니다.', 'error')
+    } finally { isSavingEdit.value = false }
+  }
+
   if (schedule.value) {
     const prevDays = schedule.value.days?.length || 0
     const start = new Date(editForm.value.startDate)
@@ -834,39 +955,38 @@ async function saveInlineEdit() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
     
     if (diffDays < prevDays) {
-      if (!confirm('여행 기간을 줄이면 일부 보관된 관광지들이 미등록으로 이동할 수 있습니다. 계속하시겠습니까?')) {
-        return
-      }
+      openConfirm({
+        title: '여행 기간 단축',
+        message: '여행 기간을 줄이면 일부 보관된 관광지들이 미등록으로 이동할 수 있습니다. 계속하시겠습니까?',
+        confirmVariant: 'primary',
+        onConfirm: performSave
+      })
+      return
     }
   }
 
-  isSavingEdit.value = true
-  try {
-    await scheduleApi.update(schedule.value.scheduleId, {
-      title: editForm.value.title.trim(),
-      startDate: editForm.value.startDate,
-      endDate: editForm.value.endDate,
-    })
-    showToast('일정이 성공적으로 수정되었습니다.', 'success')
-    showCalendar.value = false
-    isEditingHeader.value = false
-    await loadDetail()
-  } catch (err) {
-    showToast(err?.response?.data?.message || '수정에 실패했습니다.', 'error')
-  } finally { isSavingEdit.value = false }
+  await performSave()
 }
 
 function onTitleFocus() {
   showCalendar.value = false
 }
 
-async function handleDelete() {
-  if (!confirm('이 일정을 삭제하시겠습니까?')) return
-  try {
-    await scheduleApi.delete(schedule.value.scheduleId)
-    showToast('일정이 삭제되었습니다.', 'success')
-    router.push('/schedules')
-  } catch { showToast('삭제에 실패했습니다.', 'error') }
+function handleDelete() {
+  openConfirm({
+    title: '일정 삭제',
+    message: '이 일정을 삭제하시겠습니까?',
+    confirmVariant: 'accent',
+    onConfirm: async () => {
+      try {
+        await scheduleApi.delete(schedule.value.scheduleId)
+        showToast('일정이 삭제되었습니다.', 'success')
+        router.push('/schedules')
+      } catch {
+        showToast('삭제에 실패했습니다.', 'error')
+      }
+    }
+  })
 }
 
 // 드래그앤드롭 변경 감지(Dirty Check)용 상태
@@ -876,11 +996,14 @@ let reorderTimer = null
 function onDragStart() {
   hasShownLimitWarning = false
   if (!schedule.value?.days) return
-  // 드래그 시작 시점의 days 노드 배열 구조 캡처
-  dragStartState = JSON.stringify(schedule.value.days.map(d => ({
-    date: d.date,
-    nodeIds: d.nodes.map(n => n.nodeId)
-  })))
+  // 드래그 시작 시점의 days 및 미등록 노드 배열 구조 캡처
+  dragStartState = JSON.stringify({
+    days: schedule.value.days.map(d => ({
+      date: d.date,
+      nodeIds: d.nodes.map(n => n.nodeId)
+    })),
+    unscheduled: (schedule.value.unscheduledNodes || []).map(n => n.nodeId)
+  })
 }
 
 // 드래그 종료 시 배치 저장 (2초 디바운스 + 오버레이)
@@ -893,15 +1016,14 @@ function onDragEnd() {
     d.nodes.forEach((n, i) => { n.visitOrder = i + 1 })
   })
 
-  // 예외 처리: 배치된 노드가 0개
-  const totalPlacedNodes = schedule.value.days.reduce((sum, d) => sum + d.nodes.length, 0)
-  if (totalPlacedNodes === 0) return
-
-  // 변경 감지
-  const currentState = JSON.stringify(schedule.value.days.map(d => ({
-    date: d.date,
-    nodeIds: d.nodes.map(n => n.nodeId)
-  })))
+  // 변경 감지 (미등록 노드 포함)
+  const currentState = JSON.stringify({
+    days: schedule.value.days.map(d => ({
+      date: d.date,
+      nodeIds: d.nodes.map(n => n.nodeId)
+    })),
+    unscheduled: (schedule.value.unscheduledNodes || []).map(n => n.nodeId)
+  })
   if (dragStartState === currentState) return
 
   // 기존 타이머 취소 (연속 드래그 시 마지막 것만 실행)
@@ -911,11 +1033,20 @@ function onDragEnd() {
   reorderTimer = setTimeout(async () => {
     isReordering.value = true
     try {
-      await scheduleApi.savePlacement(schedule.value.scheduleId, schedule.value.days.map(d => ({
-        date: d.date,
-        nodes: d.nodes.map((n, i) => ({ nodeId: n.nodeId, visitOrder: i + 1 }))
-      })))
+      await scheduleApi.savePlacement(
+        schedule.value.scheduleId,
+        schedule.value.days.map(d => ({
+          date: d.date,
+          nodes: d.nodes.map((n, i) => ({ nodeId: n.nodeId, visitOrder: i + 1 }))
+        })),
+        (schedule.value.unscheduledNodes || []).map((n) => ({
+          nodeId: n.nodeId,
+          visitOrder: null,
+          visitDate: null
+        }))
+      )
       showToast('순서가 저장되었습니다.', 'success')
+      await loadDetail()
     } catch (err) {
       showToast(err?.response?.data?.message || '저장에 실패했습니다.', 'error')
       await loadDetail()
@@ -928,6 +1059,12 @@ function onDragEnd() {
 // Map
 let kakaoMapInstance = null
 const currentOverlays = ref([])
+
+watch(schedule, (newVal) => {
+  if (newVal && !newVal.unscheduledNodes) {
+    newVal.unscheduledNodes = []
+  }
+}, { immediate: true })
 
 watch([viewTab, selectedDay], async ([vTab, sDay]) => {
   if (vTab === 'map') {
@@ -1521,10 +1658,11 @@ function goToAttractionDetail(node) {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;
   background: rgba(255,255,255,.75); backdrop-filter: blur(2px);
   border-radius: var(--radius-DEFAULT);
-  display: flex; align-items: center; justify-content: center;
 }
-.processing-spinner { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
-.processing-spinner span { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-on-surface-variant); }
+.processing-spinner {
+  position: sticky; top: 50vh; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem; 
+}
 
 /* Day header */
 .day-header {
@@ -1532,6 +1670,18 @@ function goToAttractionDetail(node) {
   font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); padding: 1.5rem 0 0.25rem;
 }
 .day-header__routes { display: flex; gap: 0.25rem; }
+.edge-connector__info {
+  display: flex; align-items: center; gap: 0.25rem;
+  background: var(--color-surface); padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600;
+  color: var(--color-on-surface-variant); z-index: 2;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.edge-connector__info--empty {
+  box-shadow: none;
+  background: var(--color-surface-container-lowest);
+  border: 1px dashed var(--color-outline-variant);
+}
 .day-route-btn {
   display: inline-flex; align-items: center; gap: 0.15rem;
   padding: 0.15rem 0.4rem; border-radius: var(--radius-sm);
@@ -1563,6 +1713,7 @@ function goToAttractionDetail(node) {
   align-self: stretch;
   border-left: 2px solid var(--color-outline);
   flex-shrink: 0;
+  min-height: 1.5rem;
 }
 .edge-connector__info {
   display: flex;
@@ -1593,6 +1744,15 @@ function goToAttractionDetail(node) {
 .node-list { display: flex; flex-direction: column; min-height: 2rem; }
 .unsched-section .node-list {
   gap: 0.5rem;
+}
+.empty-dropzone {
+  padding: 1.5rem; margin: 0.25rem 0;
+  background-color: var(--color-surface-container-low); color: var(--color-outline);
+  border: 1px dashed var(--color-outline-variant); font-size: 0.8rem;
+  text-align: center; border-radius: var(--radius-md); font-weight: 500;
+}
+.empty-dropzone--unsched {
+  margin-top: 0.5rem;
 }
 .node-card {
   display: flex; align-items: center; gap: 0.625rem; padding: 0.75rem 0.875rem;

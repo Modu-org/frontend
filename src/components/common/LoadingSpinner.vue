@@ -4,9 +4,18 @@
       <div class="loading-ring__track" />
       <div class="loading-ring__spin" />
     </div>
-    <span class="loading-text">데이터를 불러오고 있습니다.</span>
+    <span v-if="text" class="loading-text">{{ text }}</span>
   </div>
 </template>
+
+<script setup>
+defineProps({
+  text: {
+    type: String,
+    default: '데이터를 불러오고 있습니다.'
+  }
+})
+</script>
 
 <style scoped>
 .loading-wrap {
