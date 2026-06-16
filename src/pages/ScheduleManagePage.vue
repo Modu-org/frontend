@@ -141,7 +141,7 @@
               </button>
               <span v-if="!canAutoArrange" class="auto-tooltip-wrap">
                 <span class="material-symbols-outlined auto-info-icon">info</span>
-                <span class="auto-tooltip">각 일차별 관광지 3개부터 자동배치가 가능합니다</span>
+                <span class="auto-tooltip">관광지가 2개 이상 존재해야 자동배치가 가능합니다</span>
               </span>
             </div>
           </div>
@@ -380,10 +380,17 @@
       </div>
     </template>
 
-    <!-- Voice FAB -->
-    <button v-if="schedule" :class="['voice-fab', { 'voice-fab--active': isListening }]" aria-label="음성 명령" @click="handleVoice">
-      <span class="material-symbols-outlined" style="font-size:1.75rem;">{{ isListening ? 'mic_off' : 'mic' }}</span>
-    </button>
+    <!-- Voice FAB Container -->
+    <div v-if="schedule" class="voice-fab-container">
+      <transition name="fade">
+        <div v-if="isListening" class="voice-tooltip">
+          "1번과 2번 관광지 순서를 바꿔줘"와 같이 말씀해주세요.
+        </div>
+      </transition>
+      <button :class="['voice-fab', { 'voice-fab--active': isListening }]" aria-label="음성 명령" @click="handleVoice">
+        <span class="material-symbols-outlined" style="font-size:1.75rem;">{{ isListening ? 'mic_off' : 'mic' }}</span>
+      </button>
+    </div>
 
     <!-- BaseDialog -->
     <BaseDialog
@@ -454,8 +461,10 @@ const showAutoGuide = ref(false)
 const mapContainer = ref(null)
 
 const canAutoArrange = computed(() => {
-  if (!schedule.value?.days?.length) return false
-  return schedule.value.days.every(d => d.nodes.length >= 3)
+  if (!schedule.value) return false
+  const totalNodesCount = (schedule.value.days?.reduce((sum, d) => sum + (d.nodes?.length || 0), 0) || 0) + 
+                          (schedule.value.unscheduledNodes?.length || 0)
+  return totalNodesCount >= 2
 })
 
 const isProcessing = computed(() => isArranging.value || isListening.value || isReordering.value)
@@ -1199,20 +1208,30 @@ function speakText(text) {
   }
 }
 
+let isUserCancelled = false
+
 async function handleVoice() {
-  if (isListening.value) { voiceSearch.stopListening(); isListening.value = false; return }
+  if (isListening.value) {
+    isUserCancelled = true
+    voiceSearch.stopListening()
+    isListening.value = false
+    return
+  }
 
   // 일차 미선택 시 안내
   if (!selectedDay.value) {
-    const msg = '음성 명령을 사용하려면 먼저 일차를 선택해주세요.'
-    showToast(msg, 'warning')
+    const msg = '음성 명령을 사용하려면\n먼저 일차를 선택해주세요.'
+    showToast(msg, 'info')
     speakText(msg)
     return
   }
 
+  isUserCancelled = false
   isListening.value = true
   try {
     const { raw } = await voiceSearch.listenAndParse()
+    if (isUserCancelled) return
+
     showToast(`🎤 "${raw}"`, 'info')
 
     // AI 명령 API 호출
@@ -1234,10 +1253,15 @@ async function handleVoice() {
       schedule.value = result.schedule
     }
   } catch (err) {
+    if (isUserCancelled) return
+
     const errMsg = err?.response?.data?.message || '음성 명령 처리에 실패했습니다.'
     showToast(errMsg, 'error')
     speakText(errMsg)
-  } finally { isListening.value = false }
+  } finally {
+    isListening.value = false
+    isUserCancelled = false
+  }
 }
 
 function goToAttractionDetail(node) {
@@ -1672,7 +1696,7 @@ function goToAttractionDetail(node) {
 
 /* Day header */
 .day-header {
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem;
+  display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 0.75rem;
   font-size: var(--font-size-sm); font-weight: 700; color: var(--color-primary-deep); padding: 1.5rem 0 0.25rem;
 }
 .day-header__routes { display: flex; gap: 0.25rem; }
@@ -1692,12 +1716,12 @@ function goToAttractionDetail(node) {
   display: inline-flex; align-items: center; gap: 0.15rem;
   padding: 0.15rem 0.4rem; border-radius: var(--radius-sm);
   font-size: 0.65rem; font-weight: 600;
-  border: 1px solid var(--color-outline-variant); background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant); background: var(--color-on-primary);
   color: var(--color-on-surface-variant); cursor: pointer; transition: all 0.15s;
   white-space: nowrap;
 }
 .day-route-btn--active {
-  border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-soft);
+  border-color: var(--color-primary); color: var(--color-primary-deep); background: var(--color-primary-soft);
 }
 .day-route-btn:hover { border-color: var(--color-primary); }
 
@@ -1818,8 +1842,14 @@ function goToAttractionDetail(node) {
 
 
 /* Unsched */
-.unsched-section { margin-top: 1.25rem; }
-.unsched-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.unsched-section {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background-color: var(--color-surface-container-low);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-outline-variant);
+}
+.unsched-header { display: flex; align-items: center; justify-content: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; }
 .unsched-title { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-on-surface-variant); display: flex; align-items: center; gap: 0.25rem; margin: 0; }
 
 /* Add place button */
@@ -2124,17 +2154,60 @@ function goToAttractionDetail(node) {
 }
 
 /* Voice FAB */
-.voice-fab {
+.voice-fab-container {
   position: fixed; bottom: calc(var(--bottom-nav-height) + 1.25rem); right: 1.25rem;
+  z-index: 100; display: flex; flex-direction: column; align-items: flex-end;
+}
+.voice-fab {
+  position: static;
   width: 56px; height: 56px; border-radius: 50%; border: none;
   background: var(--color-primary); color: var(--color-on-primary);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; z-index: 40; box-shadow: 0 4px 12px rgba(0,0,0,.15); transition: all 0.18s;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.15); transition: all 0.18s;
 }
 .voice-fab:hover { transform: scale(1.05); }
 .voice-fab--active { background: var(--color-error); animation: pulse-fab 1.2s infinite; }
 @keyframes pulse-fab {
   0%,100% { box-shadow: 0 0 0 0 rgba(254,137,106,.5); }
   50% { box-shadow: 0 0 0 12px rgba(254,137,106,0); }
+}
+
+/* Voice Tooltip */
+.voice-tooltip {
+  position: absolute;
+  bottom: 72px;
+  right: 0;
+  background: var(--color-on-primary);
+  color: var(--color-on-surface);
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  border: 1px solid var(--color-outline-variant);
+  z-index: 101;
+}
+.voice-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  right: 20px;
+  border-width: 7px 7px 0;
+  border-style: solid;
+  border-color: var(--color-outline-variant) transparent transparent;
+  display: block;
+  width: 0;
+}
+.voice-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  right: 21px;
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: var(--color-on-primary) transparent transparent;
+  display: block;
+  width: 0;
 }
 </style>
