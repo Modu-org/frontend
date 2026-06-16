@@ -33,7 +33,7 @@ const iconMap = {
 .toast-container {
   position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
   z-index: 9999; display: flex; flex-direction: column; gap: 8px;
-  pointer-events: none; width: 90%; max-width: 400px;
+  pointer-events: none; width: 100%; max-width: 400px;
 }
 
 .toast {
@@ -49,7 +49,7 @@ const iconMap = {
 .toast--info    { background: var(--color-primary); color: var(--color-on-primary); }
 
 .toast__icon { font-size: 20px; flex-shrink: 0; }
-.toast__msg { flex: 1; }
+.toast__msg { flex: 1; white-space: pre-line; }
 
 .toast-enter-active { transition: all 0.3s ease; }
 .toast-leave-active { transition: all 0.25s ease; }

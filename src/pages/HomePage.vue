@@ -95,11 +95,11 @@
       </div>
     </section>
 
-    <!-- 🔥 인기 관광지 TOP -->
+    <!-- 🔥 인기 관광지 TOP 10 -->
     <section class="popular-section">
       <h2 class="section-title">
         <span class="material-symbols-outlined section-title__icon" style="color: var(--color-error);">local_fire_department</span>
-        인기 관광지 TOP
+        인기 관광지 TOP 10
       </h2>
 
       <!-- 지역 드롭다운 -->
@@ -118,33 +118,43 @@
       </div>
 
       <!-- 랭킹 리스트 -->
-      <div v-else-if="rankingList.length" class="popular-scroll">
-        <button
-          v-for="(item, idx) in rankingList"
-          :key="item.attractionId"
-          class="rank-card"
-          @click="goToAttractionDetail(item.attractionId)"
-        >
-          <div class="rank-card__thumb">
-            <img
-              :src="item.thumbnailImageUrl || FALLBACK_IMG"
-              :alt="item.name"
-              class="rank-card__img"
-              @error="e => e.target.src = FALLBACK_IMG"
-            />
-            <span class="rank-card__rank" :class="`rank-card__rank--${idx + 1}`">{{ idx + 1 }}</span>
-          </div>
-          <div class="rank-card__body">
-            <div class="rank-card__title-row">
-              <span class="rank-card__name">{{ item.name }}</span>
-              <span class="rank-card__badge">{{ getTypeLabel(item.contentTypeId) }}</span>
+      <div v-else-if="rankingList.length" class="popular-scroll-wrapper">
+        <button class="scroll-btn scroll-btn--prev" @click="scroll('left')" aria-label="이전">
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+
+        <div ref="scrollContainer" class="popular-scroll">
+          <button
+            v-for="(item, idx) in rankingList"
+            :key="item.attractionId"
+            class="rank-card"
+            @click="goToAttractionDetail(item.attractionId)"
+          >
+            <div class="rank-card__thumb">
+              <img
+                :src="item.thumbnailImageUrl || FALLBACK_IMG"
+                :alt="item.name"
+                class="rank-card__img"
+                @error="e => e.target.src = FALLBACK_IMG"
+              />
+              <span class="rank-card__rank" :class="`rank-card__rank--${idx + 1}`">{{ idx + 1 }}</span>
             </div>
-            <span class="rank-card__addr">{{ item.address }}</span>
-            <span class="rank-card__count">
-              <span class="material-symbols-outlined" style="font-size: 0.875rem;">add_circle</span>
-              {{ item.addedCount }}개의 일정에 추가됨
-            </span>
-          </div>
+            <div class="rank-card__body">
+              <div class="rank-card__title-row">
+                <span class="rank-card__name">{{ item.name }}</span>
+                <span class="rank-card__badge">{{ getTypeLabel(item.contentTypeId) }}</span>
+              </div>
+              <span class="rank-card__addr">{{ item.address }}</span>
+              <span class="rank-card__count">
+                <span class="material-symbols-outlined" style="font-size: 0.875rem;">add_circle</span>
+                {{ item.addedCount }}개의 일정에 추가됨
+              </span>
+            </div>
+          </button>
+        </div>
+
+        <button class="scroll-btn scroll-btn--next" @click="scroll('right')" aria-label="다음">
+          <span class="material-symbols-outlined">chevron_right</span>
         </button>
       </div>
 
@@ -216,6 +226,22 @@ function updateCityCodes() {
 
 
 
+
+const scrollContainer = ref(null)
+
+function scroll(direction) {
+  if (!scrollContainer.value) return
+  const scrollAmount = 420 //랭킹 카드 너비(200px) + gap(12px)을 고려한 이동 거리
+  const container = scrollContainer.value
+  const newScrollLeft = direction === 'left' 
+    ? container.scrollLeft - scrollAmount 
+    : container.scrollLeft + scrollAmount
+  
+  container.scrollTo({
+    left: newScrollLeft,
+    behavior: 'smooth'
+  })
+}
 
 function handleSearch() {
   if (!searchQuery.value.trim()) return
@@ -621,7 +647,51 @@ onMounted(async () => {
   font-size: var(--font-size-sm);
 }
 
-/* 가로 스크롤 카드 컨테이너 */
+/* 가로 스크롤 카드 컨테이너 및 좌우 이동 버튼 */
+.popular-scroll-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.scroll-btn {
+  display: none; /* 모바일 숨김 */
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline-variant);
+  color: var(--color-on-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.scroll-btn:hover {
+  background: var(--color-surface-container-high);
+  color: var(--color-primary);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.scroll-btn--prev {
+  left: -1rem;
+}
+
+.scroll-btn--next {
+  right: -1rem;
+}
+
+@media (min-width: 768px) {
+  .scroll-btn {
+    display: inline-flex; /* 데스크탑에서 노출 */
+  }
+}
+
 .popular-scroll {
   display: flex;
   gap: 0.75rem;
