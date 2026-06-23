@@ -29,6 +29,14 @@
             내 리뷰
             <span v-if="myReviewTotal" class="sidebar-badge">{{ myReviewTotal }}</span>
           </button>
+          <button
+            :class="['sidebar-nav__item', { 'sidebar-nav__item--active': activeTab === 'caregiver' }]"
+            @click="activeTab = 'caregiver'"
+          >
+            <span class="material-symbols-outlined">supervisor_account</span>
+            보호자 관리
+            <span v-if="pendingRequestCount" class="sidebar-badge sidebar-badge--accent">{{ pendingRequestCount }}</span>
+          </button>
         </nav>
       </aside>
 
@@ -175,6 +183,87 @@
           </div>
         </template>
 
+        <!-- 보호자 관리 탭 -->
+        <template v-else-if="activeTab === 'caregiver'">
+          <div class="caregiver-tab">
+            <div class="caregiver-tab__header">
+              <h2 class="caregiver-tab__title">
+                <span class="material-symbols-outlined">supervisor_account</span>
+                보호자 관리
+              </h2>
+            </div>
+
+            <!-- 보호자 등록 -->
+            <BaseCard padding="lg" elevated class="section-card">
+              <h3 class="cg-section-title">보호자 등록</h3>
+              <p class="cg-section-desc">보호자의 아이디를 입력하여 등록 요청을 보낼 수 있습니다.</p>
+              <form class="cg-register-form" @submit.prevent="handleRegisterCaregiver">
+                <BaseInput
+                  v-model="caregiverUserName"
+                  placeholder="보호자 아이디 입력"
+                  class="cg-register-input"
+                />
+                <BaseButton type="submit" :disabled="!caregiverUserName.trim() || isRegistering">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">person_add</span>
+                  요청 보내기
+                </BaseButton>
+              </form>
+            </BaseCard>
+
+            <!-- 등록된 보호자 목록 -->
+            <h3 class="cg-section-title cg-section-title--mt">내 보호자</h3>
+            <div v-if="caregiverStore.isLoading" class="cg-loading"><LoadingSpinner /></div>
+            <div v-else-if="caregiverStore.caregivers.length === 0" class="cg-empty">
+              <span class="material-symbols-outlined" style="font-size:2rem;color:var(--color-outline);">group_off</span>
+              <p>등록된 보호자가 없습니다.</p>
+            </div>
+            <ul v-else class="cg-list">
+              <li v-for="cg in caregiverStore.caregivers" :key="cg.relationId" class="cg-item">
+                <div class="cg-item__avatar">
+                  <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;font-size:1.25rem;color:var(--color-on-primary);">person</span>
+                </div>
+                <div class="cg-item__info">
+                  <span class="cg-item__name">{{ cg.caregiverName }}</span>
+                  <span :class="['cg-item__status', cg.active ? 'cg-item__status--active' : 'cg-item__status--pending']">
+                    {{ cg.active ? '활성' : '수락 대기중' }}
+                  </span>
+                </div>
+                <button class="cg-item__remove" @click="handleRemoveCaregiver(cg)">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">close</span>
+                  해제
+                </button>
+              </li>
+            </ul>
+
+            <!-- 받은 보호자 요청 -->
+            <h3 class="cg-section-title cg-section-title--mt">받은 보호자 요청</h3>
+            <div v-if="caregiverStore.receivedRequests.length === 0" class="cg-empty">
+              <p>받은 보호자 요청이 없습니다.</p>
+            </div>
+            <ul v-else class="cg-list">
+              <li v-for="req in caregiverStore.receivedRequests" :key="req.relationId" class="cg-item cg-item--request">
+                <div class="cg-item__avatar cg-item__avatar--incoming">
+                  <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;font-size:1.25rem;color:#fff;">person_add</span>
+                </div>
+                <div class="cg-item__info">
+                  <span class="cg-item__name">{{ req.travelerName }}</span>
+                  <span class="cg-item__sub">보호자 등록을 요청했습니다.</span>
+                </div>
+                <div class="cg-item__req-actions">
+                  <button class="cg-req-btn cg-req-btn--accept" @click="handleAcceptRequest(req.relationId)">
+                    <span class="material-symbols-outlined" style="font-size:0.9rem;">check</span>
+                    수락
+                  </button>
+                  <button class="cg-req-btn cg-req-btn--reject" @click="handleRejectRequest(req.relationId)">
+                    <span class="material-symbols-outlined" style="font-size:0.9rem;">close</span>
+                    거절
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </template>
+
       </div>
     </div>
 
@@ -245,6 +334,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { useCaregiverStore } from '@/stores/caregiverStore'
 import { useToast } from '@/composables/useToast'
 import { USER_DETAIL_FIELDS } from '@/constants/enums'
 import { reviewApi } from '@/api/reviewApi'
@@ -253,11 +343,12 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
+const caregiverStore = useCaregiverStore()
 const { showToast } = useToast()
 
 // ─── 탭 ────────────────────────────────────────────
-// route query로 초기 탭 설정 가능: /profile?tab=reviews
-const activeTab = ref(route.query.tab === 'reviews' ? 'reviews' : 'profile')
+const initialTab = route.query.tab === 'reviews' ? 'reviews' : route.query.tab === 'caregiver' ? 'caregiver' : 'profile'
+const activeTab = ref(initialTab)
 
 // ─── 내 정보 수정 ────────────────────────────────
 const isSaving = ref(false)
@@ -330,10 +421,18 @@ watch(activeTab, (tab) => {
   if (tab === 'reviews' && !authStore.isMyReviewsLoaded) {
     loadMyReviews()
   }
+  if (tab === 'caregiver') {
+    caregiverStore.fetchCaregivers()
+    caregiverStore.fetchReceivedRequests()
+  }
 })
 
 onMounted(() => {
   if (activeTab.value === 'reviews') loadMyReviews()
+  if (activeTab.value === 'caregiver') {
+    caregiverStore.fetchCaregivers()
+    caregiverStore.fetchReceivedRequests()
+  }
 })
 
 async function loadMyReviews(force = false) {
@@ -409,6 +508,34 @@ async function confirmDeleteMyReview() {
     showToast('삭제에 실패했습니다.', 'error')
     deleteDialog.visible = false
   }
+}
+
+// ─── 보호자 관리 ──────────────────────────────────
+const caregiverUserName = ref('')
+const isRegistering = ref(false)
+const pendingRequestCount = computed(() => caregiverStore.receivedRequests.length || null)
+
+async function handleRegisterCaregiver() {
+  if (!caregiverUserName.value.trim()) return
+  isRegistering.value = true
+  try {
+    await caregiverStore.registerCaregiver(caregiverUserName.value.trim())
+    caregiverUserName.value = ''
+  } finally {
+    isRegistering.value = false
+  }
+}
+
+function handleRemoveCaregiver(cg) {
+  caregiverStore.removeCaregiver(cg.caregiverId)
+}
+
+function handleAcceptRequest(relationId) {
+  caregiverStore.acceptRequest(relationId)
+}
+
+function handleRejectRequest(relationId) {
+  caregiverStore.rejectRequest(relationId)
 }
 
 // ─── 유틸 ────────────────────────────────────────
@@ -750,4 +877,123 @@ function formatDate(dt) {
 .privacy-toggle__label { display: flex; align-items: center; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--color-on-surface-variant); }
 
 .review-edit-modal__footer { display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+/* ─── 보호자 관리 탭 ─────────────────────────── */
+.sidebar-badge--accent {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.caregiver-tab { display: flex; flex-direction: column; gap: 1rem; }
+.caregiver-tab__header {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--color-outline-variant);
+}
+.caregiver-tab__title {
+  display: flex; align-items: center; gap: 0.375rem;
+  font-size: var(--font-size-xl); font-weight: 700;
+  color: var(--color-on-surface); margin: 0;
+}
+.caregiver-tab__title .material-symbols-outlined { color: var(--color-primary); }
+
+.cg-section-title {
+  font-size: var(--font-size-base); font-weight: 700;
+  color: var(--color-on-surface-variant);
+  margin-bottom: 8px; padding-left: 12px;
+  border-left: 4px solid var(--color-primary);
+}
+.cg-section-title--mt { margin-top: 1.5rem; }
+.cg-section-desc {
+  font-size: var(--font-size-sm); color: var(--color-on-surface-variant);
+  margin-bottom: 12px;
+}
+
+.cg-register-form {
+  display: flex; gap: 0.75rem; align-items: flex-end;
+}
+.cg-register-input { flex: 1; }
+
+.cg-loading { display: flex; justify-content: center; padding: 2rem; }
+.cg-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.5rem; padding: 2rem 1rem; text-align: center;
+  color: var(--color-on-surface-variant); font-size: var(--font-size-sm);
+}
+
+.cg-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+
+.cg-item {
+  display: flex; align-items: center; gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-DEFAULT);
+  background: var(--color-surface-container-lowest);
+  border: 1.5px solid var(--color-outline-variant);
+  transition: box-shadow 0.18s;
+}
+.cg-item:hover { box-shadow: var(--shadow-md); }
+.cg-item--request {
+  background: var(--color-accent-container);
+  border-color: var(--color-accent-200);
+}
+
+.cg-item__avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cg-item__avatar--incoming {
+  background: var(--gradient-accent);
+}
+
+.cg-item__info { flex: 1; min-width: 0; }
+.cg-item__name {
+  font-size: var(--font-size-sm); font-weight: 700;
+  color: var(--color-on-surface); display: block;
+}
+.cg-item__status {
+  font-size: var(--font-size-xs); font-weight: 600;
+}
+.cg-item__status--active { color: var(--color-primary-deep); }
+.cg-item__status--pending { color: var(--color-accent-500); }
+.cg-item__sub {
+  font-size: var(--font-size-xs); color: var(--color-on-surface-variant);
+}
+
+.cg-item__remove {
+  display: flex; align-items: center; gap: 0.2rem;
+  padding: 0.3rem 0.6rem; border-radius: var(--radius-sm);
+  background: none; border: 1.5px solid var(--color-outline-variant);
+  font-size: var(--font-size-xs); font-weight: 600;
+  color: var(--color-error-deep); cursor: pointer;
+  transition: all 0.15s;
+}
+.cg-item__remove:hover {
+  background: var(--color-error-container);
+  border-color: var(--color-error);
+}
+
+.cg-item__req-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+
+.cg-req-btn {
+  display: flex; align-items: center; gap: 0.15rem;
+  padding: 0.35rem 0.65rem; border-radius: var(--radius-sm);
+  border: 1.5px solid; font-size: var(--font-size-xs);
+  font-weight: 700; cursor: pointer;
+  transition: all 0.15s; background: none;
+}
+.cg-req-btn--accept {
+  color: var(--color-primary-deep);
+  border-color: var(--color-primary);
+}
+.cg-req-btn--accept:hover { background: var(--color-primary-soft); }
+.cg-req-btn--reject {
+  color: var(--color-error-deep);
+  border-color: var(--color-error);
+}
+.cg-req-btn--reject:hover { background: var(--color-error-container); }
 </style>

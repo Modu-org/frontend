@@ -142,6 +142,17 @@
               >{{ day.dayNum }}</button>
             </div>
           </div>
+
+          <!-- 보호자 도착 알림 -->
+          <div class="form-row">
+            <label class="arrival-share-check">
+              <input type="checkbox" v-model="form.arrivalShared" />
+              <span class="arrival-share-check__label">
+                <span class="material-symbols-outlined" style="font-size:1.1rem;">share_location</span>
+                보호자에게 도착 알림 공유
+              </span>
+            </label>
+          </div>
         </div>
 
         <!-- 하단 버튼 -->
@@ -193,7 +204,7 @@ watch(showNewDialog, (v) => {
   document.body.style.overflow = v ? 'hidden' : ''
 })
 
-const form = ref({ title: '', startDate: '', endDate: '' })
+const form = ref({ title: '', startDate: '', endDate: '', arrivalShared: false })
 
 // 새 일정 추가 커스텀 캘린더 팝업 상태
 const showCalendar = ref(false)
@@ -402,7 +413,7 @@ function nextMonth() {
   }
 }
 
-function resetForm() { form.value = { title: '', startDate: '', endDate: '' }; showCalendar.value = false }
+function resetForm() { form.value = { title: '', startDate: '', endDate: '', arrivalShared: false }; showCalendar.value = false }
 
 function closeNewDialog() {
   showNewDialog.value = false
@@ -418,6 +429,7 @@ async function createSchedule() {
       title: form.value.title.trim(),
       startDate: form.value.startDate,
       endDate: form.value.endDate,
+      arrivalShared: form.value.arrivalShared,
     })
     showToast('일정이 생성되었습니다!', 'success')
     router.push(`/schedule/${res.data.scheduleId}`)
@@ -700,5 +712,28 @@ async function handleVoice() {
 .day-btn--end-cap {
   border-top-right-radius: 50%;
   border-bottom-right-radius: 50%;
+}
+
+/* 도착 알림 체크박스 */
+.arrival-share-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+.arrival-share-check input {
+  accent-color: var(--color-primary);
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.arrival-share-check__label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
 }
 </style>
