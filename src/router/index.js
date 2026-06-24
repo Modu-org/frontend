@@ -77,6 +77,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/arrival/:arrivalLogId',
+    name: 'ArrivalDetail',
+    component: () => import('@/pages/ArrivalDetailPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/pages/ProfilePage.vue'),

@@ -71,10 +71,12 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useCaregiverStore } from '@/stores/caregiverStore'
 import { useAuthStore } from '@/stores/authStore'
 
+const router = useRouter()
 const notificationStore = useNotificationStore()
 const caregiverStore = useCaregiverStore()
 const authStore = useAuthStore()
@@ -133,6 +135,12 @@ function formatTime(dt) {
 
 async function handleClick(n) {
   if (!n.read) await notificationStore.markAsRead(n.notificationId)
+
+  // ARRIVAL 타입이면 도착 상세 페이지로 이동
+  if (n.type === 'ARRIVAL' && n.referenceId) {
+    isOpen.value = false
+    router.push(`/arrival/${n.referenceId}`)
+  }
 }
 
 async function handleAccept(n) {

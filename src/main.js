@@ -17,9 +17,14 @@ authStore.tryRestoreSession().finally(async () => {
   app.mount('#app')
 
   // ─── FCM 서비스 워커 등록 & 토큰 저장 ───────────
+  let swRegistration = null
   if ('serviceWorker' in navigator) {
     try {
-      await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        scope: '/',
+      })
+      // 서비스 워커 업데이트 확인
+      swRegistration.update().catch(() => {})
     } catch (e) {
       console.warn('FCM 서비스 워커 등록 실패:', e)
     }
@@ -27,17 +32,17 @@ authStore.tryRestoreSession().finally(async () => {
 
   // 로그인 상태라면 FCM 토큰 저장 + 포그라운드 알림 리스너 등록
   if (authStore.isAuthenticated) {
-    initFcm()
+    initFcm(swRegistration)
   }
 })
 
-async function initFcm() {
+async function initFcm(swRegistration) {
   try {
     const { requestFcmToken, onForegroundMessage } = await import('./firebase')
     const { fcmApi } = await import('./api/fcmApi')
     const { useNotificationStore } = await import('./stores/notificationStore')
 
-    const token = await requestFcmToken()
+    const token = await requestFcmToken(swRegistration)
     if (token) {
       await fcmApi.saveToken(token).catch(() => {})
     }

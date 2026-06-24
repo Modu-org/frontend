@@ -31,21 +31,25 @@ function getMessagingInstance() {
 
 /**
  * FCM 토큰을 발급받는다.
+ * @param {ServiceWorkerRegistration} [swRegistration] - 서비스 워커 등록 객체
  * @returns {Promise<string|null>} FCM 디바이스 토큰
  */
-export async function requestFcmToken() {
+export async function requestFcmToken(swRegistration) {
   try {
     const m = getMessagingInstance()
     if (!m) return null
 
+    // 알림 권한 요청
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
       console.warn('알림 권한이 거부되었습니다.')
       return null
     }
 
-    // 서비스 워커 등록 확인
-    const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+    // 서비스 워커 registration 확보
+    const registration = swRegistration
+      || await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+      || await navigator.serviceWorker.ready
 
     const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || undefined
     const token = await getToken(m, {

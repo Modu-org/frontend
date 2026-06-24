@@ -31,7 +31,6 @@
                   <span class="toggle-slider"></span>
                 </label>
                 <span class="arrival-share-label">
-                  <span class="material-symbols-outlined" style="font-size:1rem;">share_location</span>
                   보호자 도착 알림
                 </span>
               </div>
@@ -199,6 +198,12 @@
                 handle=".drag-handle"
                 :group="{ name: 'schedule-nodes', put: (to, from) => checkPutLimit(to, from, d) }"
                 :disabled="isProcessing"
+                :force-fallback="true"
+                :fallback-tolerance="5"
+                :scroll="true"
+                :scroll-sensitivity="120"
+                :scroll-speed="18"
+                :bubble-scroll="true"
                 class="node-list"
                 @start="onDragStart"
                 @end="onDragEnd"
@@ -238,18 +243,18 @@
                         <span class="node-card__addr">{{ node.address }}</span>
                       </div>
                       <div class="node-card__actions">
-                        <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
-                          상세 보기
-                        </BaseButton>
-                        <BaseButton
+                                                <BaseButton
                           v-if="schedule.arrivalShared"
                           size="xs"
-                          variant="primary"
+                          variant="ghost"
                           :disabled="arrivalLoading[node.nodeId]"
                           @click.stop="handleArrivalConfirm(node)"
                         >
                           <span class="material-symbols-outlined" style="font-size:0.875rem;">location_on</span>
                           {{ arrivalLoading[node.nodeId] ? '확인 중...' : '도착 확인' }}
+                        </BaseButton>
+                        <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
+                          상세 보기
                         </BaseButton>
                         <BaseButton size="xs" variant="primary" @click.stop="excludeNode(node)">
                           일정에서 제외
@@ -288,6 +293,12 @@
               handle=".drag-handle"
               :group="'schedule-nodes'"
               :sort="false"
+              :force-fallback="true"
+              :fallback-tolerance="5"
+              :scroll="true"
+              :scroll-sensitivity="120"
+              :scroll-speed="18"
+              :bubble-scroll="true"
               class="node-list"
               @start="onDragStart"
               @end="onDragEnd"
@@ -1885,6 +1896,7 @@ function goToAttractionDetail(node) {
   display: flex;
   gap: 0.35rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .node-card__actions :deep(button) {
@@ -1907,10 +1919,16 @@ function goToAttractionDetail(node) {
   }
   .node-card__actions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
     margin-top: 0.25rem;
     padding-top: 0.375rem;
     border-top: 1px solid var(--color-outline-variant);
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .node-card__actions :deep(button) {
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.65rem !important;
   }
 }
 

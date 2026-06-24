@@ -102,6 +102,47 @@
             </div>
           </BaseCard>
 
+          <!-- 푸시 알림 설정 -->
+          <BaseCard padding="lg" elevated class="profile-card">
+            <div class="push-setting">
+              <div class="push-setting__info">
+                <h3 class="push-setting__title">
+                  <span class="material-symbols-outlined" style="font-size:1.15rem;">notifications_active</span>
+                  푸시 알림
+                </h3>
+                <p class="push-setting__desc">
+                  {{ pushDescText }}
+                </p>
+              </div>
+              <BaseButton
+                v-if="pushStatus !== 'granted' && !isIosNonPwa"
+                size="sm"
+                :variant="pushStatus === 'denied' ? 'ghost' : 'primary'"
+                :disabled="pushStatus === 'denied' || !supportsNotification"
+                @click="requestPushPermission"
+              >
+                <span class="material-symbols-outlined" style="font-size:0.9rem;">{{ pushStatus === 'denied' ? 'notifications_off' : 'notifications' }}</span>
+                {{ pushStatus === 'denied' ? '차단됨' : '알림 허용' }}
+              </BaseButton>
+              <span v-else-if="pushStatus === 'granted'" class="push-status-badge">
+                <span class="material-symbols-outlined" style="font-size:0.9rem;">check_circle</span>
+                활성
+              </span>
+            </div>
+
+            <!-- iOS 홈 화면 추가 안내 -->
+            <div v-if="isIosNonPwa" class="ios-install-guide">
+              <div class="ios-install-guide__icon">
+                <span class="material-symbols-outlined" style="font-size:1.5rem;">ios_share</span>
+              </div>
+              <div class="ios-install-guide__steps">
+                <p class="ios-install-guide__step"><strong>1.</strong> 하단 공유 버튼 <span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">ios_share</span> 을 눌러주세요</p>
+                <p class="ios-install-guide__step"><strong>2.</strong> "홈 화면에 추가"를 선택해주세요</p>
+                <p class="ios-install-guide__step"><strong>3.</strong> 설치된 앱에서 알림을 허용해주세요</p>
+              </div>
+            </div>
+          </BaseCard>
+
           <!-- 액션 버튼 -->
           <div class="profile-actions">
             <BaseButton full-width :loading="isSaving" @click="handleSave">
@@ -404,6 +445,60 @@ async function handleLogout() {
   router.push('/')
 }
 
+// ─── 푸시 알림 설정 ────────────────────────────────
+const pushStatus = ref('default')
+const supportsNotification = typeof window !== 'undefined' && 'Notification' in window
+// iOS Safari에서 PWA로 설치하지 않은 경우 감지
+const isIos = computed(() => {
+  const ua = navigator.userAgent || ''
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+})
+const isStandalone = computed(() =>
+  window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+)
+const isIosNonPwa = computed(() => isIos.value && !isStandalone.value)
+
+const pushDescText = computed(() => {
+  if (isIosNonPwa.value) {
+    return '아이폰에서 푸시 알림을 받으려면 이 앱을 홈 화면에 추가해야 합니다.'
+  }
+  if (!supportsNotification) {
+    return '이 브라우저에서는 알림을 지원하지 않습니다.'
+  }
+  if (pushStatus.value === 'granted') return '알림이 활성화되어 있습니다.'
+  if (pushStatus.value === 'denied') return '알림이 차단되어 있습니다. 브라우저 설정에서 허용해주세요.'
+  return '보호자 도착 알림 등을 받으려면 알림을 허용해주세요.'
+})
+
+onMounted(() => {
+  if (supportsNotification) {
+    pushStatus.value = Notification.permission
+  }
+})
+
+async function requestPushPermission() {
+  try {
+    const permission = await Notification.requestPermission()
+    pushStatus.value = permission
+
+    if (permission === 'granted') {
+      showToast('알림이 활성화되었습니다!', 'success')
+
+      // FCM 토큰 발급 및 서버 전송
+      const { requestFcmToken } = await import('@/firebase')
+      const { fcmApi } = await import('@/api/fcmApi')
+      const token = await requestFcmToken()
+      if (token) {
+        await fcmApi.saveToken(token).catch(() => {})
+      }
+    } else if (permission === 'denied') {
+      showToast('알림이 차단되었습니다. 브라우저 설정에서 허용해주세요.', 'error')
+    }
+  } catch (e) {
+    showToast('알림 권한 요청에 실패했습니다.', 'error')
+  }
+}
+
 // ─── 내 리뷰 ────────────────────────────────────
 const myReviews = computed(() => authStore.myReviews)
 const isMyReviewLoading = ref(false)
@@ -702,6 +797,47 @@ function formatDate(dt) {
   border-radius: 3px; cursor: pointer;
 }
 .font-scale-labels { display: flex; justify-content: space-between; margin-top: 4px; color: var(--color-outline); font-weight: 500; }
+/* ─── 푸시 알림 설정 ─────────────────────── */
+.push-setting {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.push-setting__info { flex: 1; min-width: 0; }
+.push-setting__title {
+  display: flex; align-items: center; gap: 0.35rem;
+  font-size: var(--font-size-sm); font-weight: 700;
+  color: var(--color-on-surface); margin: 0 0 0.25rem;
+}
+.push-setting__desc {
+  font-size: var(--font-size-xs); color: var(--color-on-surface-variant);
+  margin: 0; line-height: 1.4;
+}
+.push-status-badge {
+  display: flex; align-items: center; gap: 0.2rem;
+  padding: 0.25rem 0.6rem; border-radius: var(--radius-full);
+  background: #d1fae5; color: #065f46;
+  font-size: var(--font-size-xs); font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* iOS 홈 화면 추가 안내 */
+.ios-install-guide {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  margin-top: 1rem; padding: 0.875rem 1rem;
+  background: #fef3c7; border: 1.5px solid #f59e0b;
+  border-radius: var(--radius-DEFAULT);
+}
+.ios-install-guide__icon {
+  flex-shrink: 0; color: #92400e;
+  display: flex; align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem;
+  background: #fde68a; border-radius: var(--radius-DEFAULT);
+}
+.ios-install-guide__steps { flex: 1; }
+.ios-install-guide__step {
+  font-size: var(--font-size-xs); color: #78350f;
+  margin: 0; line-height: 1.6;
+}
+
 .profile-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
 
 /* ─── 내 리뷰 탭 ─────────────────────────────── */
