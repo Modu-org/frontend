@@ -777,11 +777,17 @@ async function handleArrivalConfirm(node) {
     })
 
     const { latitude, longitude } = position.coords
-    await arrivalApi.confirmArrival(schedule.value.scheduleId, node.nodeId, {
+    const { data: res } = await arrivalApi.confirmArrival(schedule.value.scheduleId, node.nodeId, {
       latitude,
       longitude,
     })
-    showToast(`"${node.placeName}" 도착이 확인되었습니다!`, 'success')
+
+    // 704: 도착지가 너무 멀어 도착 확인 실패
+    if (!res.data?.arrived) {
+      showToast(res.data?.message || res.message || '도착 확인에 실패했습니다.', 'error')
+    } else {
+      showToast(`"${node.placeName}" 도착이 확인되었습니다!`, 'success')
+    }
   } catch (err) {
     if (err?.code === 1) {
       showToast('위치 권한이 필요합니다. 브라우저 설정을 확인해주세요.', 'error')

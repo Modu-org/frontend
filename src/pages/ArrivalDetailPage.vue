@@ -101,6 +101,13 @@ async function loadArrivalLog() {
   error.value = null
   try {
     const { data: res } = await arrivalApi.getArrivalLog(route.params.arrivalLogId)
+
+    // 704: 조회 성공이지만 결과 없음
+    if (!res.success || !res.data) {
+      error.value = res.message || '도착 정보가 존재하지 않습니다.'
+      return
+    }
+
     log.value = res.data
   } catch (err) {
     error.value = err?.response?.data?.message || '도착 정보를 불러올 수 없습니다.'
