@@ -24,6 +24,16 @@
                 <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--color-primary);">calendar_month</span>
                 <span>{{ schedule.startDate }} ~ {{ schedule.endDate }}</span>
               </div>
+              <!-- 도착 공유 토글 -->
+              <div class="arrival-share-toggle">
+                <label class="toggle-switch">
+                  <input type="checkbox" :checked="schedule.arrivalShared" @change="toggleArrivalShared">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="arrival-share-label">
+                  보호자 도착 알림
+                </span>
+              </div>
             </div>
             <div class="info-bar-view__actions">
               <BaseButton size="xs" variant="secondary" @click="isEditingHeader = true">수정</BaseButton>
@@ -188,6 +198,12 @@
                 handle=".drag-handle"
                 :group="{ name: 'schedule-nodes', put: (to, from) => checkPutLimit(to, from, d) }"
                 :disabled="isProcessing"
+                :force-fallback="true"
+                :fallback-tolerance="5"
+                :scroll="true"
+                :scroll-sensitivity="120"
+                :scroll-speed="18"
+                :bubble-scroll="true"
                 class="node-list"
                 @start="onDragStart"
                 @end="onDragEnd"
@@ -227,6 +243,16 @@
                         <span class="node-card__addr">{{ node.address }}</span>
                       </div>
                       <div class="node-card__actions">
+                                                <BaseButton
+                          v-if="schedule.arrivalShared"
+                          size="xs"
+                          variant="ghost"
+                          :disabled="arrivalLoading[node.nodeId]"
+                          @click.stop="handleArrivalConfirm(node)"
+                        >
+                          <span class="material-symbols-outlined" style="font-size:0.875rem;">location_on</span>
+                          {{ arrivalLoading[node.nodeId] ? '확인 중...' : '도착 확인' }}
+                        </BaseButton>
                         <BaseButton size="xs" variant="secondary" @click.stop="goToAttractionDetail(node)">
                           상세 보기
                         </BaseButton>
@@ -267,6 +293,12 @@
               handle=".drag-handle"
               :group="'schedule-nodes'"
               :sort="false"
+              :force-fallback="true"
+              :fallback-tolerance="5"
+              :scroll="true"
+              :scroll-sensitivity="120"
+              :scroll-speed="18"
+              :bubble-scroll="true"
               class="node-list"
               @start="onDragStart"
               @end="onDragEnd"
@@ -405,7 +437,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
@@ -414,6 +446,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { scheduleApi } from '@/api/scheduleApi'
 import { attractionApi } from '@/api/attractionApi'
+import { arrivalApi } from '@/api/arrivalApi'
 import { useToast } from '@/composables/useToast'
 import { useVoiceSearch } from '@/composables/useVoiceSearch'
 import { CONTENT_TYPE_MAP } from '@/constants/enums'
@@ -708,6 +741,58 @@ async function loadDetail() {
       showToast('일정을 불러오지 못했습니다.', 'error')
     }
   } finally { isLoading.value = false }
+}
+
+// ─── 도착 공유 토글 ────────────────────────────────
+async function toggleArrivalShared(e) {
+  const enabled = e.target.checked
+  try {
+    await scheduleApi.updateArrivalNotification(schedule.value.scheduleId, enabled)
+    schedule.value.arrivalShared = enabled
+    showToast(enabled ? '보호자 도착 알림이 켜졌습니다.' : '보호자 도착 알림이 꺼졌습니다.', 'success')
+  } catch (err) {
+    e.target.checked = !enabled
+    showToast(err?.response?.data?.message || '설정 변경에 실패했습니다.', 'error')
+  }
+}
+
+// ─── 도착 확인 ────────────────────────────────────
+const arrivalLoading = reactive({})
+
+async function handleArrivalConfirm(node) {
+  if (arrivalLoading[node.nodeId]) return
+  arrivalLoading[node.nodeId] = true
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('위치 서비스를 지원하지 않는 브라우저입니다.'))
+        return
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      })
+    })
+
+    const { latitude, longitude } = position.coords
+    await arrivalApi.confirmArrival(schedule.value.scheduleId, node.nodeId, {
+      latitude,
+      longitude,
+    })
+    showToast(`"${node.placeName}" 도착이 확인되었습니다!`, 'success')
+  } catch (err) {
+    if (err?.code === 1) {
+      showToast('위치 권한이 필요합니다. 브라우저 설정을 확인해주세요.', 'error')
+    } else if (err?.code === 2 || err?.code === 3) {
+      showToast('위치를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.', 'error')
+    } else {
+      showToast(err?.response?.data?.message || err?.message || '도착 확인에 실패했습니다.', 'error')
+    }
+  } finally {
+    arrivalLoading[node.nodeId] = false
+  }
 }
 
 function deleteNode(node) {
@@ -1811,6 +1896,7 @@ function goToAttractionDetail(node) {
   display: flex;
   gap: 0.35rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .node-card__actions :deep(button) {
@@ -1833,10 +1919,16 @@ function goToAttractionDetail(node) {
   }
   .node-card__actions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
     margin-top: 0.25rem;
     padding-top: 0.375rem;
     border-top: 1px solid var(--color-outline-variant);
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .node-card__actions :deep(button) {
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.65rem !important;
   }
 }
 
@@ -2209,5 +2301,60 @@ function goToAttractionDetail(node) {
   border-color: var(--color-on-primary) transparent transparent;
   display: block;
   width: 0;
+}
+/* ─── 도착 공유 토글 ─────────────────────────── */
+.arrival-share-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.arrival-share-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-outline-variant);
+  border-radius: var(--radius-full);
+  transition: background-color 0.25s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--color-primary);
+}
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
 }
 </style>

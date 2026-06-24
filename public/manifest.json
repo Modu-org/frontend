@@ -1,0 +1,27 @@
+{
+  "name": "이음 - 모두의 여행을 잇다",
+  "short_name": "이음",
+  "description": "모두가 함께하는 배리어프리 여행 플래너",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF5",
+  "theme_color": "#8A9A6C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "navigation"],
+  "lang": "ko",
+  "dir": "ltr"
+}

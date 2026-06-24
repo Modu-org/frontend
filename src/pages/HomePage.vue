@@ -662,7 +662,7 @@ onMounted(async () => {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-surface);
+  background: var(--color-primary-soft);
   border: 1px solid var(--color-outline-variant);
   color: var(--color-on-surface);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -673,8 +673,8 @@ onMounted(async () => {
 }
 
 .scroll-btn:hover {
-  background: var(--color-surface-container-high);
-  color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   transform: translateY(-50%) scale(1.05);
 }
 
@@ -705,7 +705,7 @@ onMounted(async () => {
 /* 랭킹 카드 */
 .rank-card {
   flex-shrink: 0;
-  width: 200px;
+  width: 250px;
   border: none;
   background: var(--color-surface-container);
   border-radius: var(--radius-DEFAULT);
@@ -762,6 +762,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+ background-color: #fff;
 }
 
 .rank-card__title-row {
@@ -792,7 +793,6 @@ onMounted(async () => {
 
 .rank-card__addr {
   font-size: var(--font-size-xs);
-  color: var(--color-outline);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -808,7 +808,7 @@ onMounted(async () => {
   margin-top: 0.125rem;
 }
 
-@media (min-width: 768px) {
+@media (max-width: 768px) {
   .rank-card {
     width: 220px;
   }

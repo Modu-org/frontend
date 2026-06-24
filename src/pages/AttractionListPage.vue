@@ -233,7 +233,7 @@ const { showToast } = useToast()
 const attractionFilterStore = useAttractionFilterStore()
 
 const CONTENT_TYPES_FILTER = CONTENT_TYPES.filter(c =>
-  ['12', '14', '39', '15', '28', '25'].includes(c.id)
+  ['12', '14', '39', '28', '38', '32'].includes(c.id)
 )
 const USER_DETAIL_FIELDS = [
   { key: 'physical',     apiKey: 'physical',     label: '거동 불편·노약자', icon: 'accessible_forward' },

@@ -22,6 +22,7 @@
         <div class="flex items-center gap-3">
           <template v-if="authStore.isAuthenticated">
             <span class="greeting-text">{{ authStore.nickname }}님, 즐거운 여행하세요!</span>
+            <NotificationBell />
             <router-link to="/profile" class="profile-circle" aria-label="마이페이지로 이동">
               <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
               <span v-else class="material-symbols-outlined profile-circle__icon" style="font-variation-settings: 'FILL' 1;">person</span>
@@ -52,11 +53,14 @@
         {{ title }}
       </h1>
       <img v-else src="/images/logo.png" alt="이음 로고(홈으로 이동)" class="h-7 cursor-pointer" @click="$router.push('/')" />
-      <!-- Mobile: 프로필 or 알림 -->
-      <router-link v-if="authStore.isAuthenticated" to="/profile" class="profile-circle profile-circle--sm" aria-label="마이페이지">
-        <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
-        <span v-else class="material-symbols-outlined profile-circle__icon" style="font-variation-settings: 'FILL' 1;">person</span>
-      </router-link>
+      <!-- Mobile: 알림 + 프로필 -->
+      <div v-if="authStore.isAuthenticated" class="flex items-center gap-1">
+        <NotificationBell />
+        <router-link to="/profile" class="profile-circle profile-circle--sm" aria-label="마이페이지">
+          <img v-if="authStore.user?.profileImg" :src="authStore.user.profileImg" alt="프로필" class="profile-circle__img" />
+          <span v-else class="material-symbols-outlined profile-circle__icon" style="font-variation-settings: 'FILL' 1;">person</span>
+        </router-link>
+      </div>
       <span v-else class="material-symbols-outlined text-[var(--color-on-surface)] text-2xl cursor-pointer" @click="$router.push('/login')">
         login
       </span>
@@ -68,6 +72,7 @@
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/composables/useToast'
+import NotificationBell from '@/components/common/NotificationBell.vue'
 
 defineProps({
   title: { type: String, default: '' },

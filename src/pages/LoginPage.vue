@@ -134,7 +134,7 @@ async function handleCheckId() {
   try {
     const result = await authStore.checkId(form.userName)
     idCheckResult.value = result.available
-    errors.userName = result.available ? '' : '이미 사용 중인 아이디입니다.'
+    // errors.userName = result.available ? '' : '이미 사용 중인 아이디입니다.'
   } catch (err) {
     errors.userName = err?.response?.data?.message || '아이디 확인 중 오류가 발생했습니다.'
     idCheckResult.value = null

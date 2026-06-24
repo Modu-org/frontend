@@ -80,4 +80,13 @@ export const scheduleApi = {
       timeout: 30000, // AI 처리 시간 고려 30초 타임아웃
     })
   },
+
+  /**
+   * PATCH /schedules/{scheduleId}/arrival-notification — 도착 알림 설정 변경
+   * @param {string|number} scheduleId
+   * @param {boolean} enabled
+   */
+  updateArrivalNotification(scheduleId, enabled) {
+    return client.patch(`/schedules/${scheduleId}/arrival-notification`, { enabled })
+  },
 }
