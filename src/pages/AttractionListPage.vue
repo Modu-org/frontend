@@ -126,8 +126,9 @@
               <div
                 v-for="item in attractions"
                 :key="item.attractionId"
-                class="map-sidebar-card"
-                @click="focusMapMarker(item)"
+                :ref="el => { if (el) sidebarCardRefs[item.attractionId] = el }"
+                :class="['map-sidebar-card', { 'map-sidebar-card--selected': selectedAttractionId === item.attractionId }]"
+                @click="selectAndFocusAttraction(item)"
               >
                 <div class="map-sidebar-card__thumb">
                   <img
@@ -603,6 +604,8 @@ const mapContainer = ref(null)
 let kakaoMapInstance = null
 const currentOverlays = ref([])
 const totalPages = ref(1)
+const selectedAttractionId = ref(null)
+const sidebarCardRefs = reactive({})
 
 watch([viewTab, attractions], async ([vTab, newAttractions]) => {
   if (vTab === 'map') {
@@ -615,6 +618,22 @@ function focusMapMarker(item) {
   if (!kakaoMapInstance || !item.latitude || !item.longitude) return
   const pos = new window.kakao.maps.LatLng(item.latitude, item.longitude)
   kakaoMapInstance.panTo(pos)
+}
+
+function selectAndFocusAttraction(item) {
+  selectedAttractionId.value = item.attractionId
+  focusMapMarker(item)
+}
+
+function selectAttractionFromMap(item) {
+  selectedAttractionId.value = item.attractionId
+  // 사이드바 카드로 자동 스크롤
+  nextTick(() => {
+    const el = sidebarCardRefs[item.attractionId]
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
 }
 
 async function changeMapPage(page) {
@@ -697,6 +716,7 @@ async function initMap() {
     
     markerWrap.addEventListener('click', () => {
       map.panTo(pos)
+      selectAttractionFromMap(item)
     })
 
     const overlay = new window.kakao.maps.CustomOverlay({
@@ -907,7 +927,7 @@ async function initMap() {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding-right: 4px;
+  padding: 0 4px;
 }
 
 .sidebar-list::-webkit-scrollbar {
@@ -942,6 +962,13 @@ async function initMap() {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border-color: var(--color-outline);
+}
+
+.map-sidebar-card--selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-container, #e8f5e9);
+  box-shadow: 0 0 0 2px var(--color-primary), 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .map-sidebar-card__thumb {

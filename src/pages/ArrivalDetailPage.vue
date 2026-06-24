@@ -101,6 +101,13 @@ async function loadArrivalLog() {
   error.value = null
   try {
     const { data: res } = await arrivalApi.getArrivalLog(route.params.arrivalLogId)
+
+    // 704: 조회 성공이지만 결과 없음
+    if (!res.success || !res.data) {
+      error.value = res.message || '도착 정보가 존재하지 않습니다.'
+      return
+    }
+
     log.value = res.data
   } catch (err) {
     error.value = err?.response?.data?.message || '도착 정보를 불러올 수 없습니다.'
@@ -191,6 +198,44 @@ function drawMap() {
       yAnchor: 1,
     })
     nextOverlay.setMap(map)
+  }
+
+  // ─── 현재 관광지 → 다음 관광지 화살표 경로선 ──────
+  if (data.attractionLatitude && data.attractionLongitude && next?.latitude && next?.longitude) {
+    const fromPos = new window.kakao.maps.LatLng(data.attractionLatitude, data.attractionLongitude)
+    const toPos = new window.kakao.maps.LatLng(next.latitude, next.longitude)
+
+    // 대시 폴리라인
+    new window.kakao.maps.Polyline({
+      map,
+      path: [fromPos, toPos],
+      strokeWeight: 3,
+      strokeColor: '#6366f1',
+      strokeOpacity: 0.8,
+      strokeStyle: 'shortdash',
+    })
+
+    // 화살표 머리 (SVG 삼각형 — 경로 방향 정확 정렬)
+    const dLat = next.latitude - data.attractionLatitude
+    const dLng = next.longitude - data.attractionLongitude
+    // atan2(dLng, dLat) → 0°=북, 90°=동 (SVG 기본 방향: 위=북)
+    const angle = Math.atan2(dLng, dLat) * 180 / Math.PI
+
+    // 화살표를 다음 관광지 바로 앞(92% 지점)에 배치
+    const t = 0.92
+    const arrowLat = data.attractionLatitude + dLat * t
+    const arrowLng = data.attractionLongitude + dLng * t
+    const arrowPos = new window.kakao.maps.LatLng(arrowLat, arrowLng)
+
+    const arrowOverlay = new window.kakao.maps.CustomOverlay({
+      position: arrowPos,
+      content: `<svg width="24" height="24" viewBox="0 0 24 24" style="transform:rotate(${angle}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,.3));">
+        <polygon points="12,2 4,20 12,15 20,20" fill="#6366f1"  stroke-linejoin="round"/>
+      </svg>`,
+      yAnchor: 0.5,
+      xAnchor: 0.5,
+    })
+    arrowOverlay.setMap(map)
   }
 
   // 모든 마커가 보이도록 bounds 조정
