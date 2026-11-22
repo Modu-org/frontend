@@ -4,6 +4,19 @@ import { mockScheduleApi } from './mock/mockSchedule'
 const useMock = import.meta.env.VITE_USE_MOCK === 'true'
 
 export const scheduleApi = {
+  // This endpoint only proposes changes. Saving requires confirmAiProposal.
+  aiWorkflow(data) {
+    return client.post('/ai/schedule-workflow', data, { timeout: 120000 })
+  },
+
+  confirmAiProposal(proposalId) {
+    return client.post(`/ai/schedule-workflow/proposals/${encodeURIComponent(proposalId)}/confirm`, {}, { timeout: 30000 })
+  },
+
+  cancelAiProposal(proposalId) {
+    return client.delete(`/ai/schedule-workflow/proposals/${encodeURIComponent(proposalId)}`)
+  },
+
   create(data) {
     if (useMock) return mockScheduleApi.create(data)
     return client.post('/schedules', data)
