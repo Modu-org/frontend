@@ -1,5 +1,6 @@
 <template>
   <DefaultLayout title="내 여행">
+    <AiScheduleWorkflowPanel ref="workflowPanel" @saved="loadSchedules" />
     <div v-if="isLoading" class="state-wrap"><LoadingSpinner /></div>
 
     <template v-else>
@@ -182,6 +183,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import AiScheduleWorkflowPanel from '@/components/common/AiScheduleWorkflowPanel.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { scheduleApi } from '@/api/scheduleApi'
 import { useToast } from '@/composables/useToast'
@@ -190,6 +192,7 @@ import { useVoiceSearch } from '@/composables/useVoiceSearch'
 const router = useRouter()
 const { showToast } = useToast()
 const voiceSearch = useVoiceSearch()
+const workflowPanel = ref(null)
 
 const schedules = ref([])
 const isLoading = ref(true)
@@ -444,6 +447,10 @@ async function handleVoice() {
   try {
     const { raw } = await voiceSearch.listenAndParse()
     showToast(`"${raw}"`, 'info')
+    if (raw.includes('일정') && /(만들|생성)/.test(raw)) {
+      await workflowPanel.value?.submitCommand(raw)
+      return
+    }
     // 간단한 명령 파싱: "N번째 일정" 선택
     const match = raw.match(/(\d+)번/)
     if (match) {

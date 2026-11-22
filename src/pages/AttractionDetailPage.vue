@@ -88,6 +88,8 @@
             </div>
 
             <!-- 지도 -->
+            <AiScheduleWorkflowPanel v-if="authStore.isAuthenticated" :key="attraction.attractionId"
+              ref="workflowPanel" :attraction-id="attraction.attractionId" />
             <section v-if="attraction.latitude && attraction.longitude" class="detail-section">
               <h2 class="detail-section__title">
                 <span class="material-symbols-outlined">map</span>위치
@@ -279,6 +281,7 @@ import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import AiScheduleWorkflowPanel from '@/components/common/AiScheduleWorkflowPanel.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ScheduleSelectModal from '@/components/common/ScheduleSelectModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
@@ -312,6 +315,7 @@ const STATUS_PRIORITY = { UNAVAILABLE:0, NEED_CHECK:1, PARTIAL:2, UNKNOWN:3, AVA
 const attraction = ref(null)
 const isLoading = ref(true)
 const isAiLoading = ref(false)
+const workflowPanel = ref(null)
 const mapRef = ref(null)
 
 // ─── 리뷰 상태 ───────────────────────────────────────────────
@@ -597,8 +601,9 @@ async function handleVoiceAction() {
     showToast(`"${raw}"`, 'info')
 
     // 1. "일정", "추가" 키워드 포함 시 일정 추가 창 띄우기 (예: "일정에 추가", "일정 추가")
-    if (raw.includes('일정') && raw.includes('추가')) {
-      handleAddSchedule()
+    if (raw.includes('일정') && /(추가|만들|생성)/.test(raw)) {
+      if (!authStore.isAuthenticated) { goLogin(); return }
+      await workflowPanel.value?.submitCommand(raw)
       return
     }
 
