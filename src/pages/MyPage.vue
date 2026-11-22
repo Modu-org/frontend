@@ -1,6 +1,5 @@
 <template>
   <DefaultLayout title="내 여행">
-    <AiScheduleWorkflowPanel @saved="scheduleStore.fetchSchedules()" />
     <!-- 새 스케줄 생성 -->
     <BaseCard padding="md" class="mb-6">
       <h2 class="section-title">
@@ -95,7 +94,6 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
-import AiScheduleWorkflowPanel from '@/components/common/AiScheduleWorkflowPanel.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { useScheduleStore } from '@/stores/scheduleStore'
 

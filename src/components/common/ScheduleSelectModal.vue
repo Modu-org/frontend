@@ -12,7 +12,6 @@
         </div>
 
         <div class="modal-body">
-          <AiScheduleWorkflowPanel :key="attractionId" :attraction-id="attractionId" @saved="handleAiSaved" />
           <!-- 기존 일정 목록 -->
           <section v-if="schedules.length" class="sched-section">
             <h3 class="sched-label">내 일정 목록</h3>
@@ -130,7 +129,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
-import AiScheduleWorkflowPanel from '@/components/common/AiScheduleWorkflowPanel.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { scheduleApi } from '@/api/scheduleApi'
 import { useToast } from '@/composables/useToast'
@@ -155,13 +153,6 @@ const isSaving = ref(false)
 const showConfirmDialog = ref(false)
 const savedScheduleId = ref(null)
 const isSavedSuccess = ref(false)
-
-function handleAiSaved(schedule) {
-  emit('saved', schedule.scheduleId)
-  savedScheduleId.value = schedule.scheduleId
-  isSavedSuccess.value = true
-  showConfirmDialog.value = true
-}
 
 const newForm = ref({ title: '', startDate: '', endDate: '' })
 
